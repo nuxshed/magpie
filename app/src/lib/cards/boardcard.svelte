@@ -26,7 +26,10 @@
     <Name id={card.id} value={b?.name ?? ''} cls="bn" />
   {:else}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="bn" ondblclick={() => (app.editing = card.id)}>{b?.name}</div>
+    <div class="bn" ondblclick={(e) => {
+        e.stopPropagation()
+        app.editing = card.id
+      }}>{b?.name}</div>
   {/if}
   <div class="bc">{count} {count === 1 ? 'item' : 'items'}</div>
 </div>

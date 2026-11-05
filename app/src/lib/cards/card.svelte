@@ -67,7 +67,6 @@
       },
       () => {
         if (moved) drop(start)
-        else if (card.kind === 'board' && !e.shiftKey && !(e.target as Element).closest('.bn')) openboard(card)
         else if (was && e.shiftKey) app.sel = app.sel.filter((id) => id !== card.id)
         else if (was) app.sel = [card.id]
       }
@@ -134,6 +133,7 @@
   function open() {
     if (card.kind === 'note') app.editing = card.id
     else if (card.kind === 'link') window.open(card.url, '_blank', 'noopener')
+    else if (card.kind === 'board') openboard(card)
   }
 </script>
 
