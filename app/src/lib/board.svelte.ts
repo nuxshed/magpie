@@ -19,6 +19,8 @@ export const app = $state({
   target: null as target | null,
   over: null as string | null,
   last: null as string | null,
+  guides: [] as { x: number; y: number; w: number; h: number }[],
+  menu: null as { x: number; y: number; pick?: boolean } | null,
   ready: false
 })
 

@@ -4,10 +4,11 @@
 </script>
 
 <script lang="ts">
-  import { app, boardat, droptarget, into, items, openboard, rect, sendto, topz, update } from '../board.svelte'
+  import { app, boardat, bounds, droptarget, into, items, openboard, rect, sendto, topz, update } from '../board.svelte'
+  import { align, edge } from '../canvas/guides'
   import { toworld, view } from '../canvas/view.svelte'
   import { track } from '../input/track'
-  import { minw, snap, type item } from '../model'
+  import { minw, type item } from '../model'
   import Boardcard from './boardcard.svelte'
   import Columncard from './columncard.svelte'
   import Imagecard from './imagecard.svelte'
@@ -49,24 +50,31 @@
       .filter((i) => app.sel.includes(i.id) && !app.sel.includes(i.parent ?? ''))
       .sort((a, b) => a.z - b.z)
     const start = moving.map((i) => ({ i, ...rect(i) }))
+    const box = bounds(moving)!
+    const others = items()
+      .filter((i) => !i.parent && !moving.some((m) => m.id === i.id))
+      .map(rect)
     let moved = false
     track(
       e,
       (dx, dy, ev) => {
         if (!moved && Math.hypot(dx, dy) < 4) return
         moved = app.dragging = true
-        if (ev.shiftKey && Math.abs(dx) > Math.abs(dy)) dy = 0
-        else if (ev.shiftKey) dx = 0
-        const me = start.find((s) => s.i.id === card.id) ?? start[0]
-        if (!ev.altKey) {
-          dx = (snap(me.x + dx / view.zoom) - me.x) * view.zoom
-          dy = (snap(me.y + dy / view.zoom) - me.y) * view.zoom
-        }
+        const lock = ev.shiftKey ? (Math.abs(dx) > Math.abs(dy) ? 'y' : 'x') : ''
+        let wx = lock === 'x' ? 0 : dx / view.zoom
+        let wy = lock === 'y' ? 0 : dy / view.zoom
         const at = toworld(ev.clientX, ev.clientY)
         app.over = boardat(at, moving)?.id ?? null
         app.target = app.over ? null : droptarget(at, moving)
+        app.guides = []
+        if (!ev.altKey && !app.over && !app.target) {
+          const a = align({ ...box, x: box.x + wx, y: box.y + wy }, others, 6 / view.zoom)
+          if (lock !== 'x') wx += a.dx
+          if (lock !== 'y') wy += a.dy
+          app.guides = a.lines
+        }
         for (const s of start) {
-          const p = { x: Math.round(s.x + dx / view.zoom), y: Math.round(s.y + dy / view.zoom) }
+          const p = { x: Math.round(s.x + wx), y: Math.round(s.y + wy) }
           app.live[s.i.id] = s.i.parent && app.target ? { ...p, w: s.w } : p
         }
       },
@@ -104,12 +112,16 @@
     app.dragging = false
     app.target = null
     app.over = null
+    app.guides = []
   }
 
   /** right edge sets width; image corners keep aspect and pin the opposite corner */
   function resize(e: PointerEvent, dir: string) {
     e.stopPropagation()
-    const s = { x: c.x, y: c.y, w: c.w, aspect: c.aspect ?? 1 }
+    const s = { x: c.x, y: c.y, w: c.w, h: app.heights[card.id] ?? 0, aspect: c.aspect ?? 1 }
+    const others = items()
+      .filter((i) => !i.parent && i.id !== card.id)
+      .map(rect)
     track(
       e,
       (dx, dy, ev) => {
@@ -121,7 +133,14 @@
           const b = s.w + (dir.includes('t') ? -dy : dy) * s.aspect
           w = Math.abs(a - s.w) > Math.abs(b - s.w) ? a : b
         }
-        w = Math.max(minw, ev.altKey ? Math.round(w) : snap(w))
+        const left = dir.includes('l')
+        app.guides = []
+        if (!ev.altKey) {
+          const g = edge(left ? s.x + s.w - w : s.x + w, s.y, s.h, others, 6 / view.zoom, left ? -1 : 1)
+          w = left ? s.x + s.w - g.v : g.v - s.x
+          app.guides = g.lines
+        }
+        w = Math.max(minw, Math.round(w))
         const p: Partial<item> = { w }
         if (dir.includes('l')) p.x = s.x + s.w - w
         if (dir.includes('t')) p.y = Math.round(s.y + (s.w - w) / s.aspect)
@@ -131,8 +150,17 @@
         const p = app.live[card.id]
         if (p) update({ [card.id]: p })
         delete app.live[card.id]
+        app.guides = []
       }
     )
+  }
+
+  /** right click selects the card, keeping a selection it is part of, and opens its menu */
+  function menu(e: MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!selected) app.sel = [card.id]
+    app.menu = { x: e.clientX, y: e.clientY }
   }
 
   function open() {
@@ -160,6 +188,7 @@
   bind:offsetHeight={app.heights[card.id]}
   onpointerdown={down}
   ondblclick={open}
+  oncontextmenu={menu}
   ondragstart={(e) => e.preventDefault()}
 >
   {#if card.kind !== 'image' && card.kind !== 'board' && !colw && (solo || editing)}

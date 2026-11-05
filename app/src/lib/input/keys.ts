@@ -13,7 +13,7 @@ import {
   undo,
   up
 } from '../board.svelte'
-import { fit, place, reset, step } from '../canvas/view.svelte'
+import { fit, place, pointer, reset, step } from '../canvas/view.svelte'
 import { widths } from '../model'
 
 const arrows: Record<string, [number, number]> = {
@@ -48,7 +48,13 @@ export function onkey(e: KeyboardEvent) {
   if (typing(e.target)) return
   const mod = e.metaKey || e.ctrlKey
   const k = e.key.toLowerCase()
+  const one = app.sel.length === 1 ? getitem(app.sel[0]) : undefined
+  if (app.menu && k === 'escape') {
+    app.menu = null
+    return e.preventDefault()
+  }
   if (mod && k === 'z') e.shiftKey ? redo() : undo()
+  else if (mod && e.shiftKey && k === 'c' && one?.kind === 'link') navigator.clipboard.writeText(one.url ?? '')
   else if (mod && k === 'a') app.sel = items().filter((i) => !i.parent).map((i) => i.id)
   else if (mod && k === 'arrowup') up()
   else if (mod && k === 'd') duplicate(app.sel)
@@ -59,7 +65,11 @@ export function onkey(e: KeyboardEvent) {
   else if (e.shiftKey && e.code === 'Digit0') reset()
   else if (k === 'escape') app.sel = []
   else if (k === 'backspace' || k === 'delete') remove(app.sel)
-  else if (k === 'n') addnote(...room('note'))
+  else if (k === 'e' && one?.kind === 'note') app.editing = one.id
+  else if (k === 'm' && app.sel.length) {
+    const at = pointer.inside ? pointer : { x: innerWidth / 2 - 116, y: innerHeight / 3 }
+    app.menu = { x: at.x, y: at.y, pick: true }
+  } else if (k === 'n') addnote(...room('note'))
   else if (k === 'c') addcolumn(room('column')[0])
   else if (k === 'b') addboard(...room('board'))
   else if (k === 'enter') enter()

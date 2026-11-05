@@ -7,6 +7,7 @@
   import type { item } from '../model'
   import Card from '../cards/card.svelte'
   import Add from '../chrome/add.svelte'
+  import Menu from '../chrome/menu.svelte'
   import Selbar from '../chrome/selbar.svelte'
   import Top from '../chrome/top.svelte'
   import Zoom from '../chrome/zoom.svelte'
@@ -85,6 +86,7 @@
     app.sel = []
     app.editing = null
     app.last = null
+    app.menu = null
     await tick()
     out?.cancel()
     const back = items().find((i) => i.kind === 'board' && i.board === from)
@@ -110,6 +112,7 @@
   /** pinch and cmd+scroll zoom around the cursor, plain scroll pans */
   function wheel(e: WheelEvent) {
     e.preventDefault()
+    app.menu = null
     const k = e.deltaMode === 1 ? 16 : 1
     if (e.ctrlKey || e.metaKey) {
       const d = Math.max(-50, Math.min(50, e.deltaY * k))
@@ -122,6 +125,7 @@
 
   /** space+drag or middle mouse pans, anywhere */
   function grab(e: PointerEvent) {
+    if (app.menu && !(e.target as Element).closest('.menu')) app.menu = null
     if (e.button !== 1 && !(space && e.button === 0)) return
     e.preventDefault()
     e.stopPropagation()
@@ -218,6 +222,7 @@
   onpointerleave={() => (pointer.inside = false)}
   onmousedown={(e) => e.button === 1 && e.preventDefault()}
   ondblclick={(e) => e.target === el && addnote(toworld(e.clientX, e.clientY))}
+  oncontextmenu={(e) => !typing(e.target) && e.preventDefault()}
   ondragover={over}
   ondragleave={(e) => !el?.contains(e.relatedTarget as Node) && (app.target = null)}
   ondrop={drop}
@@ -225,6 +230,15 @@
   <div class="world" bind:this={world} style:transform="translate({view.x}px, {view.y}px) scale({view.zoom})">
     {#each list as item (item.id)}
       <Card card={item} />
+    {/each}
+    {#each app.guides as g, n (n)}
+      <i
+        class="guide"
+        style:left="{g.x}px"
+        style:top="{g.y}px"
+        style:width="{Math.max(g.w, 1 / view.zoom)}px"
+        style:height="{Math.max(g.h, 1 / view.zoom)}px"
+      ></i>
     {/each}
   </div>
   {#if blank}
@@ -244,6 +258,7 @@
     ></div>
   {/if}
   <Selbar />
+  <Menu />
   <Top />
   <Add />
   <Zoom />
