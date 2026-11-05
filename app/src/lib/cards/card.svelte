@@ -101,14 +101,14 @@
   ondblclick={open}
   ondragstart={(e) => e.preventDefault()}
 >
+  {#if card.kind !== 'image' && (solo || editing)}
+    <i class="h r" onpointerdown={(e) => resize(e, 'r')}></i>
+  {/if}
   {#if card.kind === 'image'}
     <Imagecard card={c} {solo} {resize} />
   {:else if card.kind === 'link'}
     <Linkcard card={c} />
   {:else if card.kind === 'note'}
     <Notecard card={c} />
-  {/if}
-  {#if card.kind !== 'image' && (solo || editing)}
-    <i class="h r" onpointerdown={(e) => resize(e, 'r')}></i>
   {/if}
 </div>
