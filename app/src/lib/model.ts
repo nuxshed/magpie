@@ -15,6 +15,7 @@ export type item = {
   asset?: string
   aspect?: number
   caption?: string
+  crop?: frame
 
   url?: string
   title?: string
@@ -32,6 +33,9 @@ export type item = {
 
   board?: string
 }
+
+/** how a picture sits in its frame: frame aspect, zoom over a full fill, offset as a share of the frame, padding color */
+export type frame = { r?: number; z: number; x: number; y: number; bg?: string }
 
 export type board = {
   id: string

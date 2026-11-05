@@ -4,7 +4,7 @@
 </script>
 
 <script lang="ts">
-  import { app, bounds, cardat, droptarget, into, items, linkimage, openboard, rect, sendto, topz, update } from '../board.svelte'
+  import { app, bounds, cardat, droptarget, into, items, linkimage, openboard, rect, sendto, startcrop, topz, update } from '../board.svelte'
   import { align, edge } from '../canvas/guides'
   import { onscreen, toworld, view } from '../canvas/view.svelte'
   import { track } from '../input/track'
@@ -42,7 +42,7 @@
 
   /** select on press, move the selection once the pointer travels, drop into a column or the canvas */
   function down(e: PointerEvent) {
-    if (e.button !== 0 || editing) return
+    if (e.button !== 0 || editing || app.cropping === card.id) return
     e.stopPropagation()
     const was = selected
     if (!was) app.sel = e.shiftKey ? [...app.sel, card.id] : [card.id]
@@ -120,7 +120,7 @@
   /** right edge sets width; image corners keep aspect and pin the opposite corner */
   function resize(e: PointerEvent, dir: string) {
     e.stopPropagation()
-    const s = { x: c.x, y: c.y, w: c.w, h: app.heights[card.id] ?? 0, aspect: c.aspect ?? 1 }
+    const s = { x: c.x, y: c.y, w: c.w, h: app.heights[card.id] ?? 0, aspect: c.crop?.r ?? c.aspect ?? 1 }
     const others = items()
       .filter((i) => !i.parent && i.id !== card.id)
       .map(rect)
@@ -171,6 +171,7 @@
     if (card.kind === 'note') app.editing = card.id
     else if (card.kind === 'link') openlink(card.url)
     else if (card.kind === 'board') openboard(card)
+    else if (card.kind === 'image') startcrop(card.id)
   }
 </script>
 

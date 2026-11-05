@@ -3,11 +3,12 @@
   import { goto } from '$app/navigation'
   import { page } from '$app/state'
   import { onMount, tick, untrack } from 'svelte'
-  import { addnote, alive, app, current, droptarget, items, load, rect } from '../board.svelte'
+  import { addnote, alive, app, current, droptarget, endcrop, items, load, rect } from '../board.svelte'
   import type { item } from '../model'
   import Card from '../cards/card.svelte'
   import Add from '../chrome/add.svelte'
   import Coverpick from '../chrome/coverpick.svelte'
+  import Croptool from '../chrome/croptool.svelte'
   import Menu from '../chrome/menu.svelte'
   import Selbar from '../chrome/selbar.svelte'
   import Top from '../chrome/top.svelte'
@@ -139,6 +140,7 @@
   /** space+drag or middle mouse pans, anywhere */
   function grab(e: PointerEvent) {
     if (app.menu && !(e.target as Element).closest('.menu')) app.menu = null
+    if (app.cropping && !(e.target as Element).closest(`.cropbar, [data-id="${app.cropping}"]`)) endcrop(true)
     if (e.button !== 1 && !(space && e.button === 0)) return
     e.preventDefault()
     e.stopPropagation()
@@ -282,6 +284,7 @@
   <Selbar />
   <Menu />
   <Coverpick />
+  <Croptool />
   <Top />
   <Add />
   <Zoom />

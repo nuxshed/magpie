@@ -12,6 +12,7 @@
     remove,
     sendto,
     setcover,
+    startcrop,
     togglelayout,
     up,
     update
@@ -133,12 +134,15 @@
           {one.collapsed ? 'Expand' : 'Collapse'}
         </button>
       {/if}
+      {#if one && picture(one)}
+        <button class="mi" type="button" onclick={() => run(() => startcrop(one.id))}>Crop image…</button>
+      {/if}
       {#if pic}
         <button class="mi" type="button" onclick={() => run(() => pin(pic))}>
           {pinned.includes(pic) ? 'Remove from cover' : 'Add to cover'}
         </button>
       {/if}
-      {#if one && (one.kind !== 'image' || pic)}<div class="msep"></div>{/if}
+      {#if one}<div class="msep"></div>{/if}
       <button class="mi" type="button" onclick={() => run(() => duplicate(app.sel))}>Duplicate<span class="s">⌘D</span></button>
       {#if one?.kind === 'link'}
         <button class="mi" type="button" onclick={() => run(() => navigator.clipboard.writeText(one.url ?? ''))}>

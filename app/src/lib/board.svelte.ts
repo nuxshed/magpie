@@ -23,6 +23,7 @@ export const app = $state({
   guides: [] as { x: number; y: number; w: number; h: number }[],
   menu: null as { x: number; y: number; pick?: boolean } | null,
   covering: null as string | null,
+  cropping: null as string | null,
   ready: false
 })
 
@@ -311,6 +312,23 @@ export function cover(id: string) {
 export function setcover(id: string, cover: string[] = []) {
   const b = app.boards[id]
   if (b) commit([], [{ id, before: { cover: b.cover }, after: { cover: cover.length ? cover : undefined } }])
+}
+
+/** start cropping a card's picture */
+export function startcrop(id: string) {
+  app.sel = [id]
+  app.menu = null
+  app.cropping = id
+}
+
+/** finish cropping, keeping the draft or dropping it */
+export function endcrop(save: boolean) {
+  const id = app.cropping
+  if (!id) return
+  const l = app.live[id]
+  if (save && l && 'crop' in l) update({ [id]: { crop: l.crop } })
+  delete app.live[id]
+  app.cropping = null
 }
 
 /** use an image card as a link's image, taking the image card off the board */

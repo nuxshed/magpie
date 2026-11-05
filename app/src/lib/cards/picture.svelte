@@ -1,7 +1,8 @@
 <script lang="ts">
+  import type { HTMLImgAttributes } from 'svelte/elements'
   import { loadasset } from '../store/images'
 
-  let { asset, alt = '' }: { asset?: string; alt?: string } = $props()
+  let { asset, alt = '', ...rest }: { asset?: string; alt?: string } & HTMLImgAttributes = $props()
 
   let src = $state<string>()
 
@@ -19,4 +20,4 @@
   })
 </script>
 
-{#if src}<img {src} {alt} draggable="false" />{/if}
+{#if src}<img {src} {alt} draggable="false" {...rest} />{/if}

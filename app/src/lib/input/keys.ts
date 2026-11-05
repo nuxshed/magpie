@@ -5,12 +5,14 @@ import {
   app,
   deeper,
   duplicate,
+  endcrop,
   getitem,
   items,
   nudge,
   openboard,
   redo,
   remove,
+  startcrop,
   togglelayout,
   undo,
   up
@@ -35,6 +37,7 @@ function enter() {
   if (it?.kind === 'note') app.editing = it.id
   else if (it?.kind === 'link') openlink(it.url)
   else if (it?.kind === 'board') openboard(it)
+  else if (it?.kind === 'image') startcrop(it.id)
 }
 
 /** heights a new card is expected to grow to, for placing it */
@@ -51,6 +54,10 @@ export function onkey(e: KeyboardEvent) {
   const mod = e.metaKey || e.ctrlKey
   const k = e.key.toLowerCase()
   const one = app.sel.length === 1 ? getitem(app.sel[0]) : undefined
+  if (app.cropping) {
+    if (k === 'enter' || k === 'escape') endcrop(k === 'enter')
+    return
+  }
   if (app.covering) {
     if (k === 'escape') app.covering = null
     return

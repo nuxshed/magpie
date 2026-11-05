@@ -35,6 +35,7 @@ type item = {
   asset?: string        // asset id (sha256)
   aspect?: number
   caption?: string
+  crop?: frame          // image and link pictures: { r, z, x, y, bg }, frame aspect, zoom, offset, padding color
   // link
   url?: string
   title?: string

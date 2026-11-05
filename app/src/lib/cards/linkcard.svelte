@@ -2,6 +2,7 @@
   import { tick, untrack } from 'svelte'
   import { app, update } from '../board.svelte'
   import type { item } from '../model'
+  import Framed from './framed.svelte'
   import Picture from './picture.svelte'
 
   let { card }: { card: item } = $props()
@@ -11,6 +12,8 @@
   const site = $derived(card.site ?? short.split('/')[0])
   const compact = $derived(card.layout === 'compact')
   const editing = $derived(app.editing === card.id)
+  const cropping = $derived(app.cropping === card.id)
+  const r = $derived(compact ? 1 : (card.crop?.r ?? 1.91))
 
   let form = $state({ title: '', desc: '', site: '' })
   let box = $state<HTMLDivElement>()
@@ -63,7 +66,16 @@
   </div>
 {:else}
   {#if card.thumb || compact}
-    <div class="ph"><Picture asset={card.thumb} alt={name} /></div>
+    <div class="ph" style:aspect-ratio={compact ? null : r}>
+      <Framed
+        asset={card.thumb}
+        alt={name}
+        {r}
+        crop={card.crop}
+        edit={cropping ? (crop) => (app.live[card.id] = { crop }) : undefined}
+        resizable={!compact}
+      />
+    </div>
   {:else}
     <div class="fallback">{name}</div>
   {/if}
