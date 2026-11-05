@@ -10,6 +10,12 @@ export function toworld(sx: number, sy: number) {
   return { x: (sx - view.x) / view.zoom, y: (sy - view.y) / view.zoom }
 }
 
+/** true when a world box shows in the window */
+export function onscreen(r: { x: number; y: number; w: number; h: number }) {
+  const z = view.zoom
+  return r.x * z + view.x < innerWidth && (r.x + r.w) * z + view.x > 0 && r.y * z + view.y < innerHeight && (r.y + r.h) * z + view.y > 0
+}
+
 export function center() {
   return toworld(innerWidth / 2, innerHeight / 2)
 }
@@ -44,13 +50,7 @@ export function place(w: number, h: number, from = spot(), incol = true): { x: n
   let a = id ? getitem(id) : undefined
   if (a?.parent && !incol) a = getitem(a.parent)
   const r = a && rect(a)
-  const seen =
-    r &&
-    r.x * view.zoom + view.x < innerWidth &&
-    (r.x + r.w) * view.zoom + view.x > 0 &&
-    r.y * view.zoom + view.y < innerHeight &&
-    (r.y + r.h) * view.zoom + view.y > 0
-  if (a && r && seen) {
+  if (a && r && onscreen(r)) {
     if (a.parent) return { ...from, t: { col: a.parent, slot: kids(a.parent).findIndex((k) => k.id === a.id) + 1, h: 0 } }
     return { ...free({ x: r.x + r.w + space, y: r.y }, w, h), t: null }
   }

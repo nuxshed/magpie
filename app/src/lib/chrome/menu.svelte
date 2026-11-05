@@ -1,5 +1,20 @@
 <script lang="ts">
-  import { alive, app, duplicate, items, openboard, remove, sendto, update } from '../board.svelte'
+  import {
+    addboard,
+    addcolumn,
+    addnote,
+    alive,
+    app,
+    current,
+    duplicate,
+    items,
+    openboard,
+    remove,
+    sendto,
+    up,
+    update
+  } from '../board.svelte'
+  import { fit, toworld } from '../canvas/view.svelte'
   import type { item } from '../model'
 
   let h = $state(0)
@@ -36,11 +51,18 @@
 
   const moving = () => sel.filter((i) => !app.sel.includes(i.parent ?? ''))
   const edit = (i: item) => (app.editing = i.id)
+  const here = () => toworld(app.menu?.x ?? 0, app.menu?.y ?? 0)
+
+  /** fade and shrink a little on close */
+  function shut(node: Element) {
+    return { duration: parseFloat(getComputedStyle(node).getPropertyValue('--d-fast')), css: (t: number) => `opacity:${t};transform:scale(${0.97 + 0.03 * t})` }
+  }
 </script>
 
-{#if app.menu && pos && sel.length}
+{#if app.menu && pos}
   <div
     class="pop menu"
+    out:shut
     role="menu"
     tabindex="-1"
     style:left="{pos.x}px"
@@ -48,7 +70,20 @@
     bind:offsetHeight={h}
     onpointerdown={(e) => e.stopPropagation()}
   >
-    {#if app.menu.pick}
+    {#if !sel.length}
+      <button class="mi" type="button" onclick={() => run(() => addnote(here()))}>Add note<span class="s">N</span></button>
+      <button class="mi" type="button" onclick={() => run(() => addcolumn(here()))}>Add column<span class="s">C</span></button>
+      <button class="mi" type="button" onclick={() => run(() => addboard(here()))}>Add board<span class="s">B</span></button>
+      <div class="msep"></div>
+      <button class="mi" type="button" onclick={() => run(() => (app.sel = items().filter((i) => !i.parent).map((i) => i.id)))}>
+        Select all<span class="s">⌘A</span>
+      </button>
+      <button class="mi" type="button" onclick={() => run(fit)}>Zoom to fit<span class="s">⇧1</span></button>
+      {#if current()?.parent}
+        <button class="mi" type="button" onclick={() => run(up)}>Up one level<span class="s">[</span></button>
+      {/if}
+    {:else if app.menu.pick}
+      <div class="pick">
       <div class="rl">Move to board</div>
       {#each dests as d (d.id)}
         <button class="mi" type="button" onclick={() => run(() => sendto(moving(), d.id))}>
@@ -57,6 +92,7 @@
       {:else}
         <div class="mi s">No other boards</div>
       {/each}
+      </div>
     {:else}
       {#if one?.kind === 'link'}
         <button class="mi" type="button" onclick={() => run(() => window.open(one.url, '_blank', 'noopener'))}>

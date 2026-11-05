@@ -6,7 +6,7 @@
 <script lang="ts">
   import { app, boardat, bounds, droptarget, into, items, openboard, rect, sendto, topz, update } from '../board.svelte'
   import { align, edge } from '../canvas/guides'
-  import { toworld, view } from '../canvas/view.svelte'
+  import { onscreen, toworld, view } from '../canvas/view.svelte'
   import { track } from '../input/track'
   import { minw, type item } from '../model'
   import Boardcard from './boardcard.svelte'
@@ -54,6 +54,7 @@
     const others = items()
       .filter((i) => !i.parent && !moving.some((m) => m.id === i.id))
       .map(rect)
+      .filter(onscreen)
     let moved = false
     track(
       e,
@@ -122,6 +123,7 @@
     const others = items()
       .filter((i) => !i.parent && i.id !== card.id)
       .map(rect)
+      .filter(onscreen)
     track(
       e,
       (dx, dy, ev) => {
@@ -136,7 +138,7 @@
         const left = dir.includes('l')
         app.guides = []
         if (!ev.altKey) {
-          const g = edge(left ? s.x + s.w - w : s.x + w, s.y, s.h, others, 6 / view.zoom, left ? -1 : 1)
+          const g = edge(left ? s.x + s.w - w : s.x + w, s.y, s.h, others, 6 / view.zoom)
           w = left ? s.x + s.w - g.v : g.v - s.x
           app.guides = g.lines
         }

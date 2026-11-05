@@ -14,7 +14,7 @@
   import { onkey, typing } from '../input/keys'
   import { adddata } from '../input/paste'
   import { track } from '../input/track'
-  import { get, put } from '../store/db'
+  import { all, get, put } from '../store/db'
   import { pointer, spot, toworld, view, zoomat } from './view.svelte'
 
   let el = $state<HTMLDivElement>()
@@ -36,8 +36,15 @@
       await (await import('../store/seed')).seed()
       await goto(location.pathname, { replace: true })
     }
+    for (const v of await all<{ id?: string; n?: number; seen?: number }>('views'))
+      if (v.id) app.visits[v.id] = { n: v.n ?? 0, seen: v.seen ?? 0 }
     app.ready = true
   })
+
+  /** save a board's viewport along with how often and when it was last opened */
+  function keep(id: string, v = view) {
+    put('views', id, { x: v.x, y: v.y, zoom: v.zoom, id, ...app.visits[id] })
+  }
 
   $effect(() => {
     const id = page.params.id ?? 'home'
@@ -77,11 +84,13 @@
     const still = matchMedia('(prefers-reduced-motion: reduce)').matches
     const card = items().find((i) => i.kind === 'board' && i.board === id)
     const out = card && !still ? zoom(card, true) : null
-    if (from) put('views', from, { ...view })
+    if (from) keep(from)
     const done = out && Promise.race([out.finished, new Promise((ok) => setTimeout(ok, 400))])
-    const [v] = await Promise.all([get('views', id), done])
+    const [v] = await Promise.all([get<{ x: number; y: number; zoom: number }>('views', id), done])
     if (n !== seq) return out?.cancel()
-    Object.assign(view, v ?? { x: 0, y: 0, zoom: 1 })
+    Object.assign(view, { x: v?.x ?? 0, y: v?.y ?? 0, zoom: v?.zoom ?? 1 })
+    app.visits[id] = { n: (app.visits[id]?.n ?? 0) + 1, seen: Date.now() }
+    keep(id)
     app.current = id
     app.sel = []
     app.editing = null
@@ -99,7 +108,7 @@
     if (!app.ready) return
     const v = { ...view }
     const id = app.current
-    const t = setTimeout(() => put('views', id, v), 300)
+    const t = setTimeout(() => keep(id, v), 300)
     return () => clearTimeout(t)
   })
 
@@ -194,6 +203,15 @@
     adddata(e.clipboardData, spot())
   }
 
+  /** right click on empty canvas opens the canvas menu */
+  function context(e: MouseEvent) {
+    if (typing(e.target)) return
+    e.preventDefault()
+    if (e.target !== el) return
+    app.sel = []
+    app.menu = { x: e.clientX, y: e.clientY }
+  }
+
   function over(e: DragEvent) {
     e.preventDefault()
     const t = droptarget(toworld(e.clientX, e.clientY))
@@ -222,7 +240,7 @@
   onpointerleave={() => (pointer.inside = false)}
   onmousedown={(e) => e.button === 1 && e.preventDefault()}
   ondblclick={(e) => e.target === el && addnote(toworld(e.clientX, e.clientY))}
-  oncontextmenu={(e) => !typing(e.target) && e.preventDefault()}
+  oncontextmenu={context}
   ondragover={over}
   ondragleave={(e) => !el?.contains(e.relatedTarget as Node) && (app.target = null)}
   ondrop={drop}

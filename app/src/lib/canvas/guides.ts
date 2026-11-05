@@ -1,85 +1,73 @@
 import { snap } from '../model'
 
 export type box = { x: number; y: number; w: number; h: number }
+type hit = { v: number; lines: box[] }
 
 const flip = (r: box): box => ({ x: r.y, y: r.x, w: r.h, h: r.w })
 const across = (a: box, b: box) => a.y < b.y + b.h && a.y + a.h > b.y
-const same = (a: number, b: number) => Math.abs(a - b) < 0.5
+const dist = (h: hit, v: number) => Math.abs(h.v - v)
 
-/** gaps between cards side by side along x */
-function gaps(rs: box[]) {
-  const out: number[] = []
-  for (const a of rs)
-    for (const c of rs) {
-      const g = c.x - (a.x + a.w)
-      if (g > 0 && g < 400 && across(a, c)) out.push(g)
-    }
-  return out
+/** a vertical line at x reaching across both boxes */
+function span(a: box, b: box, x: number): box {
+  const y = Math.min(a.y, b.y)
+  return { x, y, w: 0, h: Math.max(a.y + a.h, b.y + b.h) - y }
 }
 
-/**
- * best x for b: edges and centers of other cards first, then the gaps already used between them
- * side 1 or -1 moves only b's right or left edge, as when resizing
- */
-function fit(b: box, rs: box[], reach: number, side: number) {
-  const near = rs.filter((o) => across(o, b))
-  const gs = gaps(near)
-  const edges: number[] = []
-  const want: number[] = []
+/** a horizontal marker filling the gap between a and c */
+function gap(a: box, c: box): box {
+  return { x: a.x + a.w, y: (Math.max(a.y, c.y) + Math.min(a.y + a.h, c.y + c.h)) / 2, w: c.x - a.x - a.w, h: 0 }
+}
+
+/** x lining up b's left, right or center with the nearest card's */
+function aligned(b: box, rs: box[], reach: number): hit | null {
+  let best: (hit & { d: number; far: number }) | null = null
   for (const o of rs) {
-    if (side) edges.push(o.x, o.x + o.w)
-    else edges.push(o.x, o.x + o.w - b.w, o.x + (o.w - b.w) / 2)
+    const pairs = b.w ? [[0, o.x], [b.w, o.x + o.w], [b.w / 2, o.x + o.w / 2]] : [[0, o.x], [0, o.x + o.w]]
+    for (const [off, v] of pairs) {
+      const d = Math.abs(v - off - b.x)
+      const far = Math.abs(o.y - b.y)
+      if (d > reach || (best && (d > best.d + 0.5 || (d > best.d - 0.5 && far >= best.far)))) continue
+      best = { v: v - off, d, far, lines: [span(b, o, v)] }
+    }
   }
-  for (const o of near) {
-    const r = o.x + o.w
-    if (side <= 0 && r <= b.x + reach) for (const g of gs) want.push(r + g)
-    if (side >= 0 && o.x >= b.x + b.w - reach) for (const g of gs) want.push(o.x - g - b.w)
-    if (!side) for (const q of near) if (q.x > r + b.w) want.push((r + q.x - b.w) / 2)
+  return best
+}
+
+/** x putting b in a row of cards at the gap they already share */
+function spaced(b: box, rs: box[], reach: number): hit | null {
+  const row = rs.filter((o) => across(o, b))
+  const [l1, l2] = row.filter((o) => o.x + o.w <= b.x + reach).sort((a, c) => c.x + c.w - (a.x + a.w))
+  const [r1, r2] = row.filter((o) => o.x >= b.x + b.w - reach).sort((a, c) => a.x - c.x)
+  const at = (v: number) => ({ ...b, x: v })
+  const opts: hit[] = []
+  if (l1 && l2 && l2.x + l2.w < l1.x) {
+    const v = l1.x + l1.w + (l1.x - l2.x - l2.w)
+    opts.push({ v, lines: [gap(l2, l1), gap(l1, at(v))] })
   }
-  return closest(edges, b.x, reach) ?? closest(want, b.x, reach)
+  if (r1 && r2 && r1.x + r1.w < r2.x) {
+    const v = r1.x - (r2.x - r1.x - r1.w) - b.w
+    opts.push({ v, lines: [gap(at(v), r1), gap(r1, r2)] })
+  }
+  if (l1 && r1 && l1.x + l1.w + b.w < r1.x) {
+    const v = (l1.x + l1.w + r1.x - b.w) / 2
+    opts.push({ v, lines: [gap(l1, at(v)), gap(at(v), r1)] })
+  }
+  return opts.filter((o) => dist(o, b.x) <= reach).sort((a, c) => dist(a, b.x) - dist(c, b.x))[0] ?? null
 }
 
-/** the value nearest v within reach */
-function closest(list: number[], v: number, reach: number) {
-  const best = list.sort((a, c) => Math.abs(a - v) - Math.abs(c - v))[0]
-  return best !== undefined && Math.abs(best - v) <= reach ? best : null
-}
-
-/** guide lines for b along x: shared edges and centers, and gaps equal to b's own */
-function lines(b: box, rs: box[], side: number) {
-  const out: box[] = []
-  const edges = (r: box) => (side ? [r.x, r.x + r.w] : [r.x, r.x + r.w, r.x + r.w / 2])
-  for (const o of rs)
-    for (const v of edges(b))
-      if (edges(o).some((u) => same(u, v))) {
-        const y = Math.min(b.y, o.y)
-        out.push({ x: v, y, w: 0, h: Math.max(b.y + b.h, o.y + o.h) - y })
-      }
-  const near = rs.filter((o) => across(o, b))
-  const all = [...near, b]
-  const own = near.flatMap((o) => [b.x - (o.x + o.w), o.x - (b.x + b.w)]).filter((g) => g > 0)
-  const g = Math.min(...own)
-  if (side || !isFinite(g)) return out
-  for (const a of all)
-    for (const c of all)
-      if (across(a, c) && same(c.x - (a.x + a.w), g)) {
-        const y = (Math.max(a.y, c.y) + Math.min(a.y + a.h, c.y + c.h)) / 2
-        out.push({ x: a.x + a.w, y, w: g, h: 0 })
-      }
-  return out
-}
-
-/** shift a moving box onto guides from other cards, else onto the grid */
+/** shift a moving box to line up with one card, or into an evenly spaced row, else onto the grid */
 export function align(b: box, rs: box[], reach: number) {
-  const x = fit(b, rs, reach, 0) ?? snap(b.x)
-  const y = fit(flip(b), rs.map(flip), reach, 0) ?? snap(b.y)
+  const fs = rs.map(flip)
+  const pick = (r: box, list: box[], n: number) => aligned(r, list, n) ?? spaced(r, list, n)
+  const x = pick(b, rs, reach)?.v ?? snap(b.x)
+  const y = pick(flip(b), fs, reach)?.v ?? snap(b.y)
   const to = { ...b, x, y }
-  return { dx: x - b.x, dy: y - b.y, lines: [...lines(to, rs, 0), ...lines(flip(to), rs.map(flip), 0).map(flip)] }
+  const lines = [...(pick(to, rs, 0.5)?.lines ?? []), ...(pick(flip(to), fs, 0.5)?.lines ?? []).map(flip)]
+  return { dx: x - b.x, dy: y - b.y, lines }
 }
 
-/** snap a moving vertical edge of a card spanning y to h onto other cards' edges or gaps, else the grid */
-export function edge(v: number, y: number, h: number, rs: box[], reach: number, side: 1 | -1) {
-  const b = { x: v, y, w: 0, h }
-  const x = fit(b, rs, reach, side) ?? snap(v)
-  return { v: x, lines: lines({ ...b, x }, rs, side) }
+/** snap a moving vertical edge at v, on a card spanning y to y + h, onto another card's edge, else the grid */
+export function edge(v: number, y: number, h: number, rs: box[], reach: number) {
+  const x = aligned({ x: v, y, w: 0, h }, rs, reach)?.v ?? snap(v)
+  return { v: x, lines: aligned({ x, y, w: 0, h }, rs, 0.5)?.lines ?? [] }
 }

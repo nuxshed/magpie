@@ -32,7 +32,7 @@
 .bar .count{font-size:12px;color:var(--ink-3);padding:0 8px 0 6px}
 .marquee{position:absolute;border:1px solid var(--sel-line);background:var(--sel-fill);pointer-events:none;z-index:10}
 
-@media (prefers-reduced-motion:reduce){.card{transition:box-shadow var(--d-fast) var(--ease)}}
+@media (prefers-reduced-motion:reduce){.card{transition:box-shadow var(--d-fast) var(--ease)}.menu,.menu .pick{animation:none}}
 
 .col{cursor:grab;transition:box-shadow var(--d-fast) var(--ease),transform var(--d-slow) var(--ease-settle)}
 .col:hover:not(.is-drag){box-shadow:var(--sh-1)}
@@ -58,9 +58,14 @@ input.col-t{font-family:inherit;line-height:inherit}
 .blank{position:absolute;left:0;right:0;top:42%;text-align:center;font-size:13px;color:var(--ink-3);pointer-events:none}
 .blank .big{font:34px/1.1 var(--f-display);color:var(--ink);margin-bottom:10px}
 .blank>div+div{margin-top:4px}
-.guide{position:absolute;background:var(--accent);pointer-events:none;z-index:1000001}
-.menu{z-index:40}
+.guide{position:absolute;background:var(--sel-line);pointer-events:none;z-index:1000001}
+.menu{z-index:40;transform-origin:0 0;animation:pop var(--d-base) var(--ease)}
+.menu .pick{animation:slide var(--d-base) var(--ease)}
+@keyframes pop{from{opacity:0;transform:scale(.94) translateY(-4px)}}
+@keyframes slide{from{opacity:0;transform:translateX(8px)}}
 .menu .mi{appearance:none;border:0;background:none;width:100%;font:inherit;font-size:13px;text-align:left;cursor:default}
+.menu button.mi{transition:background var(--d-fast) var(--ease),transform var(--d-fast) var(--ease)}
 .menu button.mi:hover{background:var(--surface-2)}
+.menu button.mi:active{transform:scale(.98)}
 .menu .mi .s{margin-left:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .menu div.mi.s{color:var(--ink-3)}

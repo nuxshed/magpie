@@ -3,6 +3,7 @@ import {
   addcolumn,
   addnote,
   app,
+  deeper,
   duplicate,
   getitem,
   items,
@@ -69,7 +70,9 @@ export function onkey(e: KeyboardEvent) {
   else if (k === 'm' && app.sel.length) {
     const at = pointer.inside ? pointer : { x: innerWidth / 2 - 116, y: innerHeight / 3 }
     app.menu = { x: at.x, y: at.y, pick: true }
-  } else if (k === 'n') addnote(...room('note'))
+  } else if (e.key === '[') up()
+  else if (e.key === ']') deeper()
+  else if (k === 'n') addnote(...room('note'))
   else if (k === 'c') addcolumn(room('column')[0])
   else if (k === 'b') addboard(...room('board'))
   else if (k === 'enter') enter()

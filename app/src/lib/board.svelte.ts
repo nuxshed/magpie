@@ -19,6 +19,7 @@ export const app = $state({
   target: null as target | null,
   over: null as string | null,
   last: null as string | null,
+  visits: {} as Record<string, { n: number; seen: number }>,
   guides: [] as { x: number; y: number; w: number; h: number }[],
   menu: null as { x: number; y: number; pick?: boolean } | null,
   ready: false
@@ -438,6 +439,20 @@ export function alive(id: string) {
 export function up() {
   const p = current()?.parent
   if (p) goto(href(p))
+}
+
+/** open the selected board card, else the child board visited most often and most lately */
+export function deeper() {
+  const one = app.sel.length === 1 ? getitem(app.sel[0]) : undefined
+  if (one?.kind === 'board') return openboard(one)
+  const score = (id = '') => {
+    const v = app.visits[id]
+    return v ? v.n * 0.5 ** ((Date.now() - v.seen) / 864e5) : 0
+  }
+  const best = items()
+    .filter((i) => i.kind === 'board' && i.board && alive(i.board))
+    .sort((a, b) => score(b.board) - score(a.board) || a.y - b.y || a.x - b.x)[0]
+  if (best) openboard(best)
 }
 
 /** open the board behind a board card */
