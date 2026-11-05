@@ -31,7 +31,7 @@
     track(
       e,
       (dx, dy, ev) => {
-        if (!moved && Math.hypot(dx, dy) < 3) return
+        if (!moved && Math.hypot(dx, dy) < 4) return
         moved = app.dragging = true
         if (ev.shiftKey && Math.abs(dx) > Math.abs(dy)) dy = 0
         else if (ev.shiftKey) dx = 0
@@ -89,7 +89,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
   class="card {card.kind === 'image' ? 'img' : card.kind}"
-  class:is-selected={selected && !editing}
+  class:is-selected={selected && !editing && !dragging}
   class:is-drag={dragging}
   class:editing
   style:left="{c.x}px"

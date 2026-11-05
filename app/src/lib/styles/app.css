@@ -1,16 +1,19 @@
 /* app-only rules on top of magpie.css */
 .app{background:var(--canvas);user-select:none;-webkit-user-select:none;touch-action:none}
 .app.space{cursor:grab}
-.app.panning{cursor:grabbing}
+.app.panning,.app.grabbing,.app.grabbing *{cursor:grabbing}
 .top{pointer-events:none}
 .top>*{pointer-events:auto}
 .br .q:nth-child(2){min-width:52px;justify-content:center;font-variant-numeric:tabular-nums}
 
-.card:hover:not(.is-drag){box-shadow:var(--sh-1)}
-.img:hover{box-shadow:none}
+.card{cursor:grab;transition:box-shadow var(--d-fast) var(--ease),transform var(--d-slow) var(--ease-settle)}
+.card.is-drag{transition:box-shadow var(--d-base) var(--ease),transform var(--d-base) var(--ease)}
+.card:not(.img):hover:not(.is-drag){box-shadow:var(--sh-1)}
 .img:hover:not(.is-drag) .ph{box-shadow:var(--sh-1)}
 .img .ph{background:var(--surface-2)}
 .ph img{display:block;width:100%;height:100%;object-fit:cover;border-radius:inherit}
+.h{background:none;border:0}
+.h.r{top:0;bottom:0;right:-4px;width:8px;height:auto;margin:0}
 .h.tl,.h.brr{cursor:nwse-resize}
 .h.tr,.h.bl{cursor:nesw-resize}
 .h.r{cursor:ew-resize}
@@ -18,7 +21,7 @@
 .note{overflow-wrap:break-word}
 .note ol{margin:0 0 6px;padding-left:18px}
 .note a{-webkit-user-drag:none}
-.note.editing{font:14px/1.5 var(--f-ui)}
+.note.editing{font:14px/1.5 var(--f-ui);white-space:normal;cursor:text}
 .note .mirror,.note textarea{white-space:pre-wrap;overflow-wrap:break-word}
 .note textarea{position:absolute;inset:0;width:100%;height:100%;padding:inherit;margin:0;border:0;background:none;resize:none;overflow:hidden;outline:none;font:inherit;color:transparent;caret-color:var(--ink)}
 

@@ -3,7 +3,7 @@
   --ink: #1A1A19; --ink-2: #4F4F4A; --ink-3: #6B6B66; --line: #E0E0DB;
   --accent: #2B50E6; --accent-soft: rgba(43,80,230,.14); --accent-ink: #FFFFFF;
   --danger: #B93A26; --scrim: rgba(26,26,25,.28);
-  --sel: #1A1A19; --sel-line: rgba(26,26,25,.35); --sel-fill: rgba(26,26,25,.04);
+  --sel: hsl(214,84%,56%); --sel-line: hsla(214,84%,56%,.5); --sel-fill: hsla(214,84%,56%,.08);
   --sh-0: 0 0 0 1px rgba(0,0,0,.05);
   --sh-1: 0 1px 3px rgba(0,0,0,.08), 0 0 0 1px rgba(0,0,0,.05);
   --sh-2: 0 12px 28px rgba(0,0,0,.16), 0 0 0 1px rgba(0,0,0,.05);
@@ -24,7 +24,7 @@
   --ink: #EDEDE9; --ink-2: #BDBDB7; --ink-3: #9A9A94; --line: #30302D;
   --accent: #7D96FF; --accent-soft: rgba(125,150,255,.18); --accent-ink: #0E1430;
   --danger: #F08068; --scrim: rgba(0,0,0,.5);
-  --sel: #EDEDE9; --sel-line: rgba(237,237,233,.35); --sel-fill: rgba(237,237,233,.05);
+  --sel: hsl(214,84%,56%); --sel-line: hsla(214,84%,56%,.5); --sel-fill: hsla(214,84%,56%,.1);
   --sh-0: 0 0 0 1px rgba(255,255,255,.04);
   --sh-1: 0 1px 3px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.06);
   --sh-2: 0 14px 32px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.07);

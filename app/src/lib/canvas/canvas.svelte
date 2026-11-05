@@ -138,6 +138,7 @@
   class="app"
   class:space
   class:panning
+  class:grabbing={app.dragging}
   bind:this={el}
   onpointerdowncapture={grab}
   onpointerdown={down}
