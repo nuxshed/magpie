@@ -19,7 +19,8 @@
 .h.r{cursor:ew-resize}
 
 .note{overflow-wrap:break-word}
-.note ol{margin:0 0 6px;padding-left:18px}
+.note ol{padding-left:18px}
+.note h3,.note p,.note ul,.note ol,.note li{margin:0;line-height:21px}
 .note a{-webkit-user-drag:none}
 .note.editing{font:14px/1.5 var(--f-ui);white-space:normal;cursor:text}
 .card:not(.img).is-selected,.note.editing,.img.is-selected .ph{outline:2px solid var(--sel);outline-offset:0}
