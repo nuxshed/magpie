@@ -23,6 +23,7 @@ export type item = {
   thumb?: string
   layout?: 'large' | 'compact'
   note?: string
+  fetched?: number
 
   text?: string
 
@@ -49,6 +50,11 @@ export const grid = 8
 /** round to the nearest grid line */
 export const snap = (n: number) => Math.round(n / grid) * grid
 export const widths = { image: 260, link: 256, note: 256, column: 272, board: 220 }
+
+/** open a link in a new tab, http and https only */
+export function openlink(url = '') {
+  if (/^https?:\/\//i.test(url)) window.open(url, '_blank', 'noopener')
+}
 
 const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
 

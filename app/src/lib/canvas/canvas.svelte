@@ -15,6 +15,7 @@
   import { adddata } from '../input/paste'
   import { track } from '../input/track'
   import { all, get, put } from '../store/db'
+  import { fetchpreviews } from '../store/preview'
   import { pointer, spot, toworld, view, zoomat } from './view.svelte'
 
   let el = $state<HTMLDivElement>()
@@ -39,6 +40,8 @@
     for (const v of await all<{ id?: string; n?: number; seen?: number }>('views'))
       if (v.id) app.visits[v.id] = { n: v.n ?? 0, seen: v.seen ?? 0 }
     app.ready = true
+    fetchpreviews()
+    addEventListener('online', () => fetchpreviews())
   })
 
   /** save a board's viewport along with how often and when it was last opened */

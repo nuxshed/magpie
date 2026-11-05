@@ -15,7 +15,7 @@
     update
   } from '../board.svelte'
   import { fit, toworld } from '../canvas/view.svelte'
-  import type { item } from '../model'
+  import { openlink, type item } from '../model'
 
   let h = $state(0)
   const sel = $derived(items().filter((i) => app.sel.includes(i.id)))
@@ -95,7 +95,7 @@
       </div>
     {:else}
       {#if one?.kind === 'link'}
-        <button class="mi" type="button" onclick={() => run(() => window.open(one.url, '_blank', 'noopener'))}>
+        <button class="mi" type="button" onclick={() => run(() => openlink(one.url))}>
           Open link<span class="s">↵</span>
         </button>
       {:else if one?.kind === 'board'}

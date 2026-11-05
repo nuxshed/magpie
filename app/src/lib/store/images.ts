@@ -8,12 +8,12 @@ async function hash(blob: Blob) {
 }
 
 /** compress an image, store it once by hash, return its asset id and aspect */
-export async function saveimage(file: Blob) {
+export async function saveimage(file: Blob, edge = maxedge) {
   const bmp = await createImageBitmap(file)
   const aspect = bmp.width / bmp.height
   let blob = file
   if (file.type !== 'image/gif') {
-    const k = Math.min(1, maxedge / Math.max(bmp.width, bmp.height))
+    const k = Math.min(1, edge / Math.max(bmp.width, bmp.height))
     const c = new OffscreenCanvas(Math.round(bmp.width * k), Math.round(bmp.height * k))
     c.getContext('2d')!.drawImage(bmp, 0, 0, c.width, c.height)
     blob = await c.convertToBlob({ type: 'image/webp', quality: 0.82 })

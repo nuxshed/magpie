@@ -253,6 +253,23 @@ function patch(patches: Record<string, Partial<item>>) {
   return changes
 }
 
+/** patch cards on any board with no undo step, for previews and sync */
+export function system(patches: Record<string, Partial<item>>) {
+  const now = Date.now()
+  for (const b of Object.values(app.boards)) {
+    const hit = b.items.filter((i) => patches[i.id])
+    for (const i of hit) Object.assign(i, patches[i.id], { updated: now })
+    if (hit.length) save(b)
+  }
+  for (const s of [...past, ...future])
+    for (const c of s.changes) {
+      const p = patches[c.after.id]
+      if (!p) continue
+      Object.assign(c.after, p)
+      if (c.before) Object.assign(c.before, p)
+    }
+}
+
 /** add cards on top of the open board, or into a column, and select them */
 export function add(list: draft[], t?: target | null, meta: meta[] = []) {
   let z = topz()

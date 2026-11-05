@@ -1,6 +1,7 @@
 import { add, droptarget, type target } from '../board.svelte'
 import { widths, type draft } from '../model'
 import { saveimage } from '../store/images'
+import { fetchpreviews } from '../store/preview'
 
 type point = { x: number; y: number }
 
@@ -26,8 +27,10 @@ export function addtext(text: string, at: point, t?: target | null) {
   if (!text) return
   const x = Math.round(at.x)
   const y = Math.round(at.y)
-  if (/^https?:\/\/\S+$/.test(text)) add([{ kind: 'link', x, y, w: widths.link, url: text }], t)
-  else add([{ kind: 'note', x, y, w: widths.note, text }], t)
+  if (/^https?:\/\/\S+$/.test(text)) {
+    add([{ kind: 'link', x, y, w: widths.link, url: text }], t)
+    fetchpreviews([text])
+  } else add([{ kind: 'note', x, y, w: widths.note, text }], t)
 }
 
 /** paste or drop data at a point, into a column when over one */

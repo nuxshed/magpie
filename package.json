@@ -6,6 +6,8 @@
     "dev": "bun run --cwd app dev",
     "check": "bun run --cwd app check",
     "build": "bun run --cwd app build",
-    "worker": "bun run --cwd worker dev"
+    "worker": "bun run --cwd worker dev",
+    "deploy": "bun run build && bun --env-file=../.env run --cwd worker wrangler pages deploy ../app/build --project-name mymagpie --branch main",
+    "deployworker": "bun --env-file=../.env run --cwd worker deploy"
   }
 }

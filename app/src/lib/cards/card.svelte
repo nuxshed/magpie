@@ -8,7 +8,7 @@
   import { align, edge } from '../canvas/guides'
   import { onscreen, toworld, view } from '../canvas/view.svelte'
   import { track } from '../input/track'
-  import { minw, type item } from '../model'
+  import { minw, openlink, type item } from '../model'
   import Boardcard from './boardcard.svelte'
   import Columncard from './columncard.svelte'
   import Imagecard from './imagecard.svelte'
@@ -167,7 +167,7 @@
 
   function open() {
     if (card.kind === 'note') app.editing = card.id
-    else if (card.kind === 'link') window.open(card.url, '_blank', 'noopener')
+    else if (card.kind === 'link') openlink(card.url)
     else if (card.kind === 'board') openboard(card)
   }
 </script>
@@ -180,6 +180,7 @@
   class:is-target={(col && app.target?.col === card.id) || app.over === card.id}
   class:collapsed={col && card.collapsed}
   class:editing
+  class:compact={card.kind === 'link' && card.layout === 'compact'}
   data-id={card.id}
   style:left={colw ? null : `${c.x}px`}
   style:top={colw ? null : `${c.y}px`}

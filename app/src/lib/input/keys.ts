@@ -15,7 +15,7 @@ import {
   up
 } from '../board.svelte'
 import { fit, place, pointer, reset, step } from '../canvas/view.svelte'
-import { widths } from '../model'
+import { openlink, widths } from '../model'
 
 const arrows: Record<string, [number, number]> = {
   arrowleft: [-1, 0],
@@ -32,7 +32,7 @@ export function typing(t: EventTarget | null) {
 function enter() {
   const it = app.sel.length === 1 ? getitem(app.sel[0]) : undefined
   if (it?.kind === 'note') app.editing = it.id
-  else if (it?.kind === 'link') window.open(it.url, '_blank', 'noopener')
+  else if (it?.kind === 'link') openlink(it.url)
   else if (it?.kind === 'board') openboard(it)
 }
 
