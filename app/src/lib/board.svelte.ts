@@ -18,6 +18,7 @@ export const app = $state({
   heights: {} as Record<string, number>,
   target: null as target | null,
   over: null as string | null,
+  last: null as string | null,
   ready: false
 })
 
@@ -258,6 +259,7 @@ export function add(list: draft[], t?: target | null, meta: meta[] = []) {
   for (const i of made) Object.assign(i, p[i.id])
   commit([...made.map((after) => ({ before: null, after })), ...patch(p)], meta)
   app.sel = made.map((i) => i.id)
+  app.last = made.at(-1)?.id ?? null
   return made
 }
 
@@ -334,8 +336,8 @@ export function nudge(ids: string[], dx: number, dy: number) {
 }
 
 /** new empty note at a point, already editing */
-export function addnote(at: point) {
-  const [n] = add([{ kind: 'note', x: Math.round(at.x), y: Math.round(at.y), w: widths.note, text: '' }], droptarget(at))
+export function addnote(at: point, t = droptarget(at)) {
+  const [n] = add([{ kind: 'note', x: Math.round(at.x), y: Math.round(at.y), w: widths.note, text: '' }], t)
   app.editing = n.id
 }
 
@@ -346,12 +348,12 @@ export function addcolumn(at: point) {
 }
 
 /** new board card and its empty board, already renaming */
-export function addboard(at: point) {
+export function addboard(at: point, t = droptarget(at)) {
   const id = newid()
   app.boards[id] = { id, name: 'Untitled', parent: app.current, items: [], updated: Date.now(), deleted: true }
   const [c] = add(
     [{ kind: 'board', x: Math.round(at.x), y: Math.round(at.y), w: widths.board, board: id }],
-    droptarget(at),
+    t,
     [{ id, before: { deleted: true }, after: { deleted: false } }]
   )
   app.editing = c.id

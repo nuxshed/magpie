@@ -7,7 +7,7 @@
   import { app, boardat, droptarget, into, items, openboard, rect, sendto, topz, update } from '../board.svelte'
   import { toworld, view } from '../canvas/view.svelte'
   import { track } from '../input/track'
-  import { minw, type item } from '../model'
+  import { minw, snap, type item } from '../model'
   import Boardcard from './boardcard.svelte'
   import Columncard from './columncard.svelte'
   import Imagecard from './imagecard.svelte'
@@ -57,6 +57,11 @@
         moved = app.dragging = true
         if (ev.shiftKey && Math.abs(dx) > Math.abs(dy)) dy = 0
         else if (ev.shiftKey) dx = 0
+        const me = start.find((s) => s.i.id === card.id) ?? start[0]
+        if (!ev.altKey) {
+          dx = (snap(me.x + dx / view.zoom) - me.x) * view.zoom
+          dy = (snap(me.y + dy / view.zoom) - me.y) * view.zoom
+        }
         const at = toworld(ev.clientX, ev.clientY)
         app.over = boardat(at, moving)?.id ?? null
         app.target = app.over ? null : droptarget(at, moving)
@@ -107,7 +112,7 @@
     const s = { x: c.x, y: c.y, w: c.w, aspect: c.aspect ?? 1 }
     track(
       e,
-      (dx, dy) => {
+      (dx, dy, ev) => {
         dx /= view.zoom
         dy /= view.zoom
         let w = s.w + dx
@@ -116,7 +121,7 @@
           const b = s.w + (dir.includes('t') ? -dy : dy) * s.aspect
           w = Math.abs(a - s.w) > Math.abs(b - s.w) ? a : b
         }
-        w = Math.max(minw, Math.round(w))
+        w = Math.max(minw, ev.altKey ? Math.round(w) : snap(w))
         const p: Partial<item> = { w }
         if (dir.includes('l')) p.x = s.x + s.w - w
         if (dir.includes('t')) p.y = Math.round(s.y + (s.w - w) / s.aspect)

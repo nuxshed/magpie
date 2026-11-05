@@ -44,6 +44,10 @@ export type board = {
 export type draft = Omit<item, 'id' | 'z' | 'updated'>
 
 export const minw = 160
+export const grid = 8
+
+/** round to the nearest grid line */
+export const snap = (n: number) => Math.round(n / grid) * grid
 export const widths = { image: 260, link: 256, note: 256, column: 272, board: 220 }
 
 const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'

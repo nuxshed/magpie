@@ -13,7 +13,8 @@ import {
   undo,
   up
 } from '../board.svelte'
-import { fit, reset, spot, step } from '../canvas/view.svelte'
+import { fit, place, reset, step } from '../canvas/view.svelte'
+import { widths } from '../model'
 
 const arrows: Record<string, [number, number]> = {
   arrowleft: [-1, 0],
@@ -34,6 +35,15 @@ function enter() {
   else if (it?.kind === 'board') openboard(it)
 }
 
+/** heights a new card is expected to grow to, for placing it */
+const tall = { note: 80, column: 160, board: 220 }
+
+/** a free spot for a new card, at the cursor or else the view center */
+export function room(kind: 'note' | 'column' | 'board', from?: { x: number; y: number }) {
+  const p = place(widths[kind], tall[kind], from, kind !== 'column')
+  return [p, p.t] as const
+}
+
 export function onkey(e: KeyboardEvent) {
   if (typing(e.target)) return
   const mod = e.metaKey || e.ctrlKey
@@ -49,9 +59,9 @@ export function onkey(e: KeyboardEvent) {
   else if (e.shiftKey && e.code === 'Digit0') reset()
   else if (k === 'escape') app.sel = []
   else if (k === 'backspace' || k === 'delete') remove(app.sel)
-  else if (k === 'n') addnote(spot())
-  else if (k === 'c') addcolumn(spot())
-  else if (k === 'b') addboard(spot())
+  else if (k === 'n') addnote(...room('note'))
+  else if (k === 'c') addcolumn(room('column')[0])
+  else if (k === 'b') addboard(...room('board'))
   else if (k === 'enter') enter()
   else if (arrows[k] && app.sel.length) {
     const d = e.shiftKey ? 10 : 1

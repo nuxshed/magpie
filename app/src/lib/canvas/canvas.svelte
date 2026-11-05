@@ -84,6 +84,7 @@
     app.current = id
     app.sel = []
     app.editing = null
+    app.last = null
     await tick()
     out?.cancel()
     const back = items().find((i) => i.kind === 'board' && i.board === from)

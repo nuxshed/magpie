@@ -1,4 +1,5 @@
-import { bounds, items } from '../board.svelte'
+import { app, bounds, droptarget, getitem, items, kids, rect, type target } from '../board.svelte'
+import { snap } from '../model'
 
 export const view = $state({ x: 0, y: 0, zoom: 1 })
 export const pointer = { x: 0, y: 0, inside: false }
@@ -16,6 +17,46 @@ export function center() {
 /** where new cards go: the cursor, else the view center */
 export function spot() {
   return pointer.inside ? toworld(pointer.x, pointer.y) : center()
+}
+
+const space = 24
+
+/** the nearest spot to a point where a w by h card overlaps nothing, preferring right and down */
+function free(p: { x: number; y: number }, w: number, h: number) {
+  const rs = items()
+    .filter((i) => !i.parent)
+    .map(rect)
+  const hit = (x: number, y: number) =>
+    rs.some((r) => x < r.x + r.w + space && x + w + space > r.x && y < r.y + r.h + space && y + h + space > r.y)
+  const spots = []
+  for (let i = -20; i <= 20; i++) for (let j = -20; j <= 20; j++) spots.push({ x: p.x + i * space, y: p.y + j * space })
+  const cost = (s: { x: number; y: number }) => {
+    const dx = s.x - p.x
+    const dy = s.y - p.y
+    return Math.hypot(dx, dy) + (dx < 0 ? 200 : 0) + (dy < 0 ? 100 : 0)
+  }
+  return spots.sort((a, b) => cost(a) - cost(b)).find((s) => !hit(s.x, s.y)) ?? p
+}
+
+/** where a new card goes: after the selected or last added card when it is in view, else the cursor or view center, never on top of another card */
+export function place(w: number, h: number, from = spot(), incol = true): { x: number; y: number; t: target | null } {
+  const id = app.sel.length === 1 ? app.sel[0] : app.last
+  let a = id ? getitem(id) : undefined
+  if (a?.parent && !incol) a = getitem(a.parent)
+  const r = a && rect(a)
+  const seen =
+    r &&
+    r.x * view.zoom + view.x < innerWidth &&
+    (r.x + r.w) * view.zoom + view.x > 0 &&
+    r.y * view.zoom + view.y < innerHeight &&
+    (r.y + r.h) * view.zoom + view.y > 0
+  if (a && r && seen) {
+    if (a.parent) return { ...from, t: { col: a.parent, slot: kids(a.parent).findIndex((k) => k.id === a.id) + 1, h: 0 } }
+    return { ...free({ x: r.x + r.w + space, y: r.y }, w, h), t: null }
+  }
+  const t = incol ? droptarget(from) : null
+  if (t) return { ...from, t }
+  return { ...free({ x: snap(from.x), y: snap(from.y) }, w, h), t: null }
 }
 
 /** zoom keeping a screen point still */
