@@ -52,6 +52,7 @@ input.col-t,input.bn{border:0;padding:0;margin:0;background:none;outline:none;wi
 .board{cursor:pointer;box-shadow:var(--sh-0),5px 5px 0 var(--surface),5px 5px 0 1px var(--line)}
 .board::after{content:none}
 .board:hover:not(.is-drag){box-shadow:var(--sh-1),5px 5px 0 var(--surface),5px 5px 0 1px var(--line)}
+.card.board.is-target{box-shadow:0 0 0 1.5px var(--accent),5px 5px 0 var(--surface),5px 5px 0 1px var(--line)}
 .cover .ph{background:var(--surface-2)}
 .bn{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:text}
 

@@ -2,7 +2,7 @@ import { goto } from '$app/navigation'
 import { newid, widths, type board, type draft, type item } from './model'
 import { all, put } from './store/db'
 
-type change = { before: item | null; after: item }
+type change = { before: item | null; after: item; board?: string }
 type meta = { id: string; before: Partial<board>; after: Partial<board> }
 type step = { board: string; changes: change[]; meta: meta[] }
 type point = { x: number; y: number }
@@ -17,6 +17,7 @@ export const app = $state({
   live: {} as Record<string, Partial<item>>,
   heights: {} as Record<string, number>,
   target: null as target | null,
+  over: null as string | null,
   ready: false
 })
 
@@ -106,6 +107,50 @@ export function droptarget(p: point, moving: item[] = []): target | null {
   return { col: col.id, slot, h: Math.max(0, h) }
 }
 
+/** the board card under a point, for cards being moved */
+export function boardat(p: point, moving: item[]) {
+  const skip = new Set(moving.map((i) => i.id))
+  return items()
+    .filter((i) => {
+      if (i.kind !== 'board' || skip.has(i.id) || skip.has(i.parent ?? '')) return false
+      const r = rect(i)
+      return p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h
+    })
+    .sort((a, b) => b.z - a.z)[0]
+}
+
+/** move cards, with the cards in their columns, onto another board, to the right of what is there */
+export function sendto(list: item[], dest: string) {
+  const b = app.boards[dest]
+  const moved = list.flatMap((i) => (i.kind === 'column' ? [i, ...kids(i.id)] : [i]))
+  const tops = moved.filter((i) => !moved.some((j) => j.id === i.parent))
+  const box = bounds(tops)
+  if (!b || !box) return
+  const there = b.items.filter((i) => !i.deleted && !i.parent)
+  const x = there.length ? Math.max(...there.map((i) => i.x + i.w)) + 40 : 64
+  const y = there.length ? Math.min(...there.map((i) => i.y)) : 96
+  let z = b.items.reduce((m, i) => Math.max(m, i.z), 0)
+  const now = Date.now()
+  const changes: change[] = []
+  for (const i of moved) {
+    const before = $state.snapshot(i)
+    const r = rect(i)
+    const top = tops.includes(i) && {
+      x: Math.round(x + r.x - box.x),
+      y: Math.round(y + r.y - box.y),
+      parent: undefined,
+      order: undefined
+    }
+    changes.push({ before, after: { ...before, deleted: true, updated: now } })
+    changes.push({ board: dest, before: null, after: { ...before, ...top, z: ++z, updated: now } })
+  }
+  const meta = moved
+    .filter((i) => i.board && app.boards[i.board])
+    .map((i) => ({ id: i.board!, before: { parent: app.current }, after: { parent: dest } }))
+  commit(changes, meta)
+  app.sel = []
+}
+
 /** parent and order patches that put cards into a column at a slot */
 export function into(t: target, ids: string[]) {
   const list = kids(t.col)
@@ -138,19 +183,30 @@ function commit(changes: change[], meta: meta[] = []) {
   past.push({ board: b.id, changes, meta })
   if (past.length > cap) past.shift()
   future.length = 0
-  for (const c of changes) write(b, c.after)
+  apply(b.id, changes.map((c) => [c.board, c.after]))
   for (const m of meta) setmeta(m, false)
-  save(b)
+}
+
+/** write items to their boards, then save each board once */
+function apply(home: string, list: [string | undefined, item][]) {
+  const touched = new Set([home])
+  for (const [id, it] of list) {
+    write(app.boards[id ?? home], it)
+    touched.add(id ?? home)
+  }
+  for (const id of touched) save(app.boards[id])
 }
 
 function replay(s: step, back: boolean) {
-  const b = app.boards[s.board]
   const now = Date.now()
-  for (const { before, after } of s.changes) {
-    write(b, { ...(back ? (before ?? { ...after, deleted: true }) : after), updated: now })
-  }
+  apply(
+    s.board,
+    s.changes.map(({ before, after, board }) => [
+      board,
+      { ...(back ? (before ?? { ...after, deleted: true }) : after), updated: now }
+    ])
+  )
   for (const m of s.meta) setmeta(m, back)
-  save(b)
   app.editing = null
   if (s.board !== app.current) goto(href(s.board))
   else app.sel = s.changes.map((c) => c.after.id).filter((id) => {

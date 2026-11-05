@@ -4,7 +4,7 @@
 </script>
 
 <script lang="ts">
-  import { app, droptarget, into, items, openboard, rect, topz, update } from '../board.svelte'
+  import { app, boardat, droptarget, into, items, openboard, rect, sendto, topz, update } from '../board.svelte'
   import { toworld, view } from '../canvas/view.svelte'
   import { track } from '../input/track'
   import { minw, type item } from '../model'
@@ -57,7 +57,9 @@
         moved = app.dragging = true
         if (ev.shiftKey && Math.abs(dx) > Math.abs(dy)) dy = 0
         else if (ev.shiftKey) dx = 0
-        app.target = droptarget(toworld(ev.clientX, ev.clientY), moving)
+        const at = toworld(ev.clientX, ev.clientY)
+        app.over = boardat(at, moving)?.id ?? null
+        app.target = app.over ? null : droptarget(at, moving)
         for (const s of start) {
           const p = { x: Math.round(s.x + dx / view.zoom), y: Math.round(s.y + dy / view.zoom) }
           app.live[s.i.id] = s.i.parent && app.target ? { ...p, w: s.w } : p
@@ -74,8 +76,10 @@
 
   function drop(start: { i: item; y: number; x: number }[]) {
     const t = app.target
+    const over = app.over && items().find((i) => i.id === app.over)
     let z = topz()
-    if (t) {
+    if (over && over.board) sendto(start.map((s) => s.i), over.board)
+    else if (t) {
       const order = [...start].sort((a, b) => a.y - b.y || a.x - b.x).map((s) => s.i.id)
       for (const id of order) {
         const r = document.querySelector(`[data-id="${id}"]`)?.getBoundingClientRect()
@@ -95,6 +99,7 @@
     app.live = {}
     app.dragging = false
     app.target = null
+    app.over = null
   }
 
   /** right edge sets width; image corners keep aspect and pin the opposite corner */
@@ -137,7 +142,7 @@
   class={col ? 'col' : `card ${card.kind === 'image' ? 'img' : card.kind}`}
   class:is-selected={selected && !editing && !dragging}
   class:is-drag={dragging}
-  class:is-target={col && app.target?.col === card.id}
+  class:is-target={(col && app.target?.col === card.id) || app.over === card.id}
   class:collapsed={col && card.collapsed}
   class:editing
   data-id={card.id}
