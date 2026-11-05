@@ -1,8 +1,8 @@
 <script lang="ts">
   import '#lib/styles/tokens.css'
   import '#lib/styles/base.css'
-  import '#lib/styles/chrome.css'
-  import '#lib/styles/cards.css'
+  import '#lib/styles/magpie.css'
+  import '#lib/styles/app.css'
 
   let { children } = $props()
 
