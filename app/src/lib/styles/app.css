@@ -22,7 +22,7 @@
 .note ol{margin:0 0 6px;padding-left:18px}
 .note a{-webkit-user-drag:none}
 .note.editing{font:14px/1.5 var(--f-ui);white-space:normal;cursor:text}
-.card.is-selected,.note.editing,.img.is-selected .ph{outline-offset:-1.5px}
+.card:not(.img).is-selected,.note.editing,.img.is-selected .ph{outline:2px solid var(--sel);outline-offset:0}
 .note .mirror,.note textarea{white-space:pre-wrap;overflow-wrap:break-word}
 .note textarea{position:absolute;inset:0;width:100%;height:100%;padding:inherit;margin:0;border:0;background:none;resize:none;overflow:hidden;outline:none;font:inherit;color:transparent;caret-color:var(--ink)}
 
