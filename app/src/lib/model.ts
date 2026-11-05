@@ -44,7 +44,7 @@ export type board = {
 export type draft = Omit<item, 'id' | 'z' | 'updated'>
 
 export const minw = 160
-export const widths = { image: 260, link: 256, note: 256 }
+export const widths = { image: 260, link: 256, note: 256, column: 272, board: 220 }
 
 const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
 

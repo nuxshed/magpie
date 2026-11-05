@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { app, bounds, duplicate, items, remove } from '../board.svelte'
+  import { app, bounds, duplicate, items, makecolumn, remove } from '../board.svelte'
   import { view } from '../canvas/view.svelte'
 
   const pad = 10
+  const cards = $derived(items().filter((i) => app.sel.includes(i.id) && i.kind !== 'column').length)
   const box = $derived.by(() => {
     if (app.sel.length < 2) return null
     const b = bounds(items().filter((i) => app.sel.includes(i.id)))
@@ -18,6 +19,7 @@
   {#if !app.dragging}
     <div class="pop bar" style:left="{box.x}px" style:top="{box.y + box.h + pad}px">
       <span class="count">{app.sel.length} selected</span>
+      {#if cards >= 2}<button class="q" type="button" onclick={() => makecolumn(app.sel)}>Make column</button>{/if}
       <button class="q" type="button" onclick={() => duplicate(app.sel)}>Duplicate</button>
       <button class="q" type="button" onclick={() => remove(app.sel)}>Delete</button>
     </div>

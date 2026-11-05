@@ -3,6 +3,7 @@
   import '#lib/styles/base.css'
   import '#lib/styles/magpie.css'
   import '#lib/styles/app.css'
+  import Canvas from '#lib/canvas/canvas.svelte'
 
   let { children } = $props()
 
@@ -15,4 +16,5 @@
   })
 </script>
 
+<Canvas />
 {@render children()}

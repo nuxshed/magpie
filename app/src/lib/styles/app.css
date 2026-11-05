@@ -33,3 +33,28 @@
 .marquee{position:absolute;border:1px solid var(--sel-line);background:var(--sel-fill);pointer-events:none;z-index:10}
 
 @media (prefers-reduced-motion:reduce){.card{transition:box-shadow var(--d-fast) var(--ease)}}
+
+.col{cursor:grab;transition:box-shadow var(--d-fast) var(--ease),transform var(--d-slow) var(--ease-settle)}
+.col:hover:not(.is-drag){box-shadow:var(--sh-1)}
+.col.is-target{box-shadow:0 0 0 1.5px var(--accent)}
+.col.is-selected{outline:2px solid var(--sel);outline-offset:0}
+.col.is-drag{transform:rotate(-1.5deg) scale(1.03);box-shadow:var(--sh-2);transition:box-shadow var(--d-base) var(--ease),transform var(--d-base) var(--ease)}
+.col-h button{appearance:none;border:0;background:none;padding:0;margin:0;display:flex;cursor:pointer}
+.col-h svg{transition:transform var(--d-fast) var(--ease)}
+.col-t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stack{position:relative;padding-bottom:0}
+.stack .card{transition:none}
+.col.is-target .stack,.col.is-target .stack .card{transition:transform var(--d-base) var(--ease),padding var(--d-base) var(--ease)}
+.stack .board{width:auto}
+.stack .drop{position:absolute;left:0;right:0;margin:0 2px}
+input.col-t,input.bn{border:0;padding:0;margin:0;background:none;outline:none;width:100%;min-width:0;color:inherit;font-family:inherit;line-height:inherit;user-select:text}
+
+.board{cursor:pointer;box-shadow:var(--sh-0),5px 5px 0 var(--surface),5px 5px 0 1px var(--line)}
+.board::after{content:none}
+.board:hover:not(.is-drag){box-shadow:var(--sh-1),5px 5px 0 var(--surface),5px 5px 0 1px var(--line)}
+.cover .ph{background:var(--surface-2)}
+.bn{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:text}
+
+.blank{position:absolute;left:0;right:0;top:42%;text-align:center;font-size:13px;color:var(--ink-3);pointer-events:none}
+.blank .big{font:34px/1.1 var(--f-display);color:var(--ink);margin-bottom:10px}
+.blank>div+div{margin-top:4px}
