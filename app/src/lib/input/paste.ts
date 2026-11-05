@@ -1,4 +1,4 @@
-import { add, droptarget, type target } from '../board.svelte'
+import { add, droptarget, update, type target } from '../board.svelte'
 import { widths, type draft } from '../model'
 import { saveimage } from '../store/images'
 import { fetchpreviews } from '../store/preview'
@@ -40,4 +40,14 @@ export function adddata(data: DataTransfer | null, at: point) {
   const t = droptarget(at)
   if (files.length) addfiles(files, at, t)
   else addtext(data.getData('text/uri-list').split('\n')[0] || data.getData('text/plain'), at, t)
+}
+
+/** pick an image file as a link card's preview image */
+export function pickthumb(id: string) {
+  const input = Object.assign(document.createElement('input'), { type: 'file', accept: 'image/*' })
+  input.onchange = async () => {
+    const f = input.files?.[0]
+    if (f) update({ [id]: { thumb: (await saveimage(f, 1200)).asset } })
+  }
+  input.click()
 }

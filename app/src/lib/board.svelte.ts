@@ -111,12 +111,13 @@ export function droptarget(p: point, moving: item[] = []): target | null {
   return { col: col.id, slot, h: Math.max(0, h) }
 }
 
-/** the board card under a point, for cards being moved */
-export function boardat(p: point, moving: item[]) {
+/** the card under a point that takes the cards being moved: a board card, or a link card for one image */
+export function cardat(p: point, moving: item[]) {
   const skip = new Set(moving.map((i) => i.id))
+  const img = moving.length === 1 && moving[0].kind === 'image'
   return items()
     .filter((i) => {
-      if (i.kind !== 'board' || skip.has(i.id) || skip.has(i.parent ?? '')) return false
+      if (!(i.kind === 'board' || (img && i.kind === 'link')) || skip.has(i.id) || skip.has(i.parent ?? '')) return false
       const r = rect(i)
       return p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h
     })
@@ -286,6 +287,19 @@ export function add(list: draft[], t?: target | null, meta: meta[] = []) {
 /** patch cards by id */
 export function update(patches: Record<string, Partial<item>>) {
   commit(patch(patches))
+}
+
+/** use an image card as a link's image, taking the image card off the board */
+export function linkimage(link: string, img: item) {
+  update({ [link]: { thumb: img.asset }, [img.id]: { deleted: true } })
+  app.sel = [link]
+}
+
+/** switch links to compact, or back to large when they all are */
+export function togglelayout(ids: string[]) {
+  const links = items().filter((i) => ids.includes(i.id) && i.kind === 'link')
+  const layout = links.every((i) => i.layout === 'compact') ? 'large' : 'compact'
+  update(Object.fromEntries(links.map((i) => [i.id, { layout }])))
 }
 
 /** delete cards, with the cards in their columns, and mark their boards deleted */

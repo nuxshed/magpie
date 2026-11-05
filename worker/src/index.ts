@@ -68,6 +68,17 @@ function fromld(text: string) {
   return out
 }
 
+/** place name from a google maps url, since maps pages only carry generic tags */
+function place(u: URL) {
+  if (!/(^|\.)google\.[a-z.]+$/.test(u.hostname) || !/^\/maps\b/.test(u.pathname) && !u.hostname.startsWith('maps.')) return
+  const name = u.pathname.match(/\/(?:place|search)\/([^/]+)/)?.[1] ?? u.searchParams.get('q')
+  try {
+    return name ? decodeURIComponent(name.replace(/\+/g, ' ')) : undefined
+  } catch {
+    return undefined
+  }
+}
+
 /** read the head of a page for its preview fields */
 async function parse(res: Response) {
   const meta: Record<string, string> = {}
@@ -123,27 +134,26 @@ async function parse(res: Response) {
 /** fetch a page and build its preview, never throwing */
 async function preview(url: URL): Promise<{ data: info; ok: boolean }> {
   const data: info = { url: url.href, site: url.hostname.replace(/^www\./, '') }
+  let end = url
+  let ok = false
   try {
     const res = await fetch(url.href, {
       headers: { 'user-agent': agent, accept: 'text/html,application/xhtml+xml', 'accept-language': 'en' },
       redirect: 'follow',
       signal: AbortSignal.timeout(5000)
     })
-    const end = new URL(res.url || url.href)
+    end = new URL(res.url || url.href)
     data.site = end.hostname.replace(/^www\./, '')
-    if (!res.ok || !(res.headers.get('content-type') ?? '').includes('text/html')) {
-      res.body?.cancel()
-      return { data, ok: false }
-    }
-    const p = await parse(res)
-    data.title = p.title
-    data.desc = p.desc
-    data.site = p.site ?? data.site
-    data.image = p.image ? weburl(decode(p.image), end.href)?.href : undefined
-    return { data, ok: !!(p.title || p.desc || p.image) }
-  } catch {
-    return { data, ok: false }
-  }
+    if (res.ok && (res.headers.get('content-type') ?? '').includes('text/html')) {
+      const p = await parse(res)
+      Object.assign(data, { title: p.title, desc: p.desc, site: p.site ?? data.site })
+      data.image = p.image ? weburl(decode(p.image), end.href)?.href : undefined
+      ok = !!(p.title || p.desc || p.image)
+    } else res.body?.cancel()
+  } catch {}
+  const name = place(end) ?? place(url)
+  if (name) Object.assign(data, { title: name, desc: undefined, site: 'Google Maps' })
+  return { data, ok }
 }
 
 /** stream an image back, image types only, no svg, capped at 10mb */

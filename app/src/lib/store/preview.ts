@@ -10,10 +10,12 @@ let running = 0
 const text = (v: unknown) => (typeof v === 'string' && v ? v : undefined)
 const ask = (path: string, q: Record<string, string>) => fetch(`${PUBLIC_PREVIEW_URL}${path}?${new URLSearchParams(q)}`)
 
-/** link cards on every board still waiting for a preview */
+/** link cards on every board still waiting for a preview, or left with nothing to show */
 function pending(url?: string) {
   return Object.values(app.boards).flatMap((b) =>
-    b.items.filter((i) => i.kind === 'link' && i.url && !i.deleted && !i.fetched && (!url || i.url === url))
+    b.items.filter(
+      (i) => i.kind === 'link' && i.url && !i.deleted && (!i.fetched || (!i.title && !i.thumb)) && (!url || i.url === url)
+    )
   )
 }
 
@@ -59,5 +61,7 @@ async function fill(url: string) {
   } catch {
     if (!navigator.onLine) return
   }
-  system(Object.fromEntries(pending(url).map((i) => [i.id, { ...p, fetched: Date.now() }])))
+  const list = pending(url).filter((i) => !i.fetched || p.title || p.thumb)
+  const keep = (i: item) => ({ title: i.title ?? p.title, desc: i.desc ?? p.desc, site: i.site ?? p.site, thumb: i.thumb ?? p.thumb })
+  system(Object.fromEntries(list.map((i) => [i.id, { ...keep(i), fetched: Date.now() }])))
 }

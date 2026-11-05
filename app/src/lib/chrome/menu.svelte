@@ -11,10 +11,12 @@
     openboard,
     remove,
     sendto,
+    togglelayout,
     up,
     update
   } from '../board.svelte'
   import { fit, toworld } from '../canvas/view.svelte'
+  import { pickthumb } from '../input/paste'
   import { openlink, type item } from '../model'
 
   let h = $state(0)
@@ -98,6 +100,16 @@
         <button class="mi" type="button" onclick={() => run(() => openlink(one.url))}>
           Open link<span class="s">↵</span>
         </button>
+        <button class="mi" type="button" onclick={() => run(() => edit(one))}>Edit details<span class="s">E</span></button>
+        <button class="mi" type="button" onclick={() => run(() => togglelayout([one.id]))}>
+          {one.layout === 'compact' ? 'Large' : 'Compact'}<span class="s">L</span>
+        </button>
+        <button class="mi" type="button" onclick={() => run(() => pickthumb(one.id))}>Change image…</button>
+        {#if one.thumb}
+          <button class="mi" type="button" onclick={() => run(() => update({ [one.id]: { thumb: undefined } }))}>
+            Remove image
+          </button>
+        {/if}
       {:else if one?.kind === 'board'}
         <button class="mi" type="button" onclick={() => run(() => openboard(one))}>Open board<span class="s">↵</span></button>
         <button class="mi" type="button" onclick={() => run(() => edit(one))}>Rename</button>

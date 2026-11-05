@@ -4,7 +4,7 @@
 </script>
 
 <script lang="ts">
-  import { app, boardat, bounds, droptarget, into, items, openboard, rect, sendto, topz, update } from '../board.svelte'
+  import { app, bounds, cardat, droptarget, into, items, linkimage, openboard, rect, sendto, topz, update } from '../board.svelte'
   import { align, edge } from '../canvas/guides'
   import { onscreen, toworld, view } from '../canvas/view.svelte'
   import { track } from '../input/track'
@@ -65,7 +65,7 @@
         let wx = lock === 'x' ? 0 : dx / view.zoom
         let wy = lock === 'y' ? 0 : dy / view.zoom
         const at = toworld(ev.clientX, ev.clientY)
-        app.over = boardat(at, moving)?.id ?? null
+        app.over = cardat(at, moving)?.id ?? null
         app.target = app.over ? null : droptarget(at, moving)
         app.guides = []
         if (!ev.altKey && !app.over && !app.target) {
@@ -91,7 +91,8 @@
     const t = app.target
     const over = app.over && items().find((i) => i.id === app.over)
     let z = topz()
-    if (over && over.board) sendto(start.map((s) => s.i), over.board)
+    if (over && over.kind === 'link') linkimage(over.id, start[0].i)
+    else if (over && over.board) sendto(start.map((s) => s.i), over.board)
     else if (t) {
       const order = [...start].sort((a, b) => a.y - b.y || a.x - b.x).map((s) => s.i.id)
       for (const id of order) {
@@ -166,6 +167,7 @@
   }
 
   function open() {
+    if (editing) return
     if (card.kind === 'note') app.editing = card.id
     else if (card.kind === 'link') openlink(card.url)
     else if (card.kind === 'board') openboard(card)

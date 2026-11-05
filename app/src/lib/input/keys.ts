@@ -11,6 +11,7 @@ import {
   openboard,
   redo,
   remove,
+  togglelayout,
   undo,
   up
 } from '../board.svelte'
@@ -66,7 +67,8 @@ export function onkey(e: KeyboardEvent) {
   else if (e.shiftKey && e.code === 'Digit0') reset()
   else if (k === 'escape') app.sel = []
   else if (k === 'backspace' || k === 'delete') remove(app.sel)
-  else if (k === 'e' && one?.kind === 'note') app.editing = one.id
+  else if (k === 'e' && (one?.kind === 'note' || one?.kind === 'link')) app.editing = one.id
+  else if (k === 'l') togglelayout(app.sel)
   else if (k === 'm' && app.sel.length) {
     const at = pointer.inside ? pointer : { x: innerWidth / 2 - 116, y: innerHeight / 3 }
     app.menu = { x: at.x, y: at.y, pick: true }

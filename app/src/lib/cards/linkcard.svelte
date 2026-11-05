@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { tick, untrack } from 'svelte'
+  import { app, update } from '../board.svelte'
   import type { item } from '../model'
   import Picture from './picture.svelte'
 
@@ -8,9 +10,49 @@
   const name = $derived(card.title ?? short)
   const site = $derived(card.site ?? short.split('/')[0])
   const compact = $derived(card.layout === 'compact')
+  const editing = $derived(app.editing === card.id)
+
+  let form = $state({ title: '', desc: '', site: '' })
+  let box = $state<HTMLDivElement>()
+
+  $effect(() => {
+    if (!editing) return
+    form = untrack(() => ({ title: card.title ?? '', desc: card.desc ?? '', site: card.site ?? '' }))
+    tick().then(() => box?.querySelector('textarea')?.focus({ preventScroll: true }))
+  })
+
+  /** save changed fields, empty ones fall back to the url */
+  function done(save: boolean) {
+    if (!editing) return
+    app.editing = null
+    if (!save) return
+    const p = { title: form.title.trim() || undefined, desc: form.desc.trim() || undefined, site: form.site.trim() || undefined }
+    if (p.title !== card.title || p.desc !== card.desc || p.site !== card.site) update({ [card.id]: p })
+  }
+
+  function key(e: KeyboardEvent) {
+    if (e.key === 'Escape') done(false)
+    else if (e.key === 'Enter' && !(e.target instanceof HTMLTextAreaElement && e.shiftKey)) {
+      e.preventDefault()
+      done(true)
+    }
+  }
 </script>
 
-{#if !card.fetched}
+{#if editing}
+  {#if card.thumb}<div class="ph"><Picture asset={card.thumb} alt={name} /></div>{/if}
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div
+    class="body"
+    bind:this={box}
+    onkeydown={key}
+    onfocusout={(e) => !box?.contains(e.relatedTarget as Node) && done(true)}
+  >
+    <textarea class="field ttl" bind:value={form.title} placeholder={short} rows="1" spellcheck="false"></textarea>
+    <textarea class="field desc" bind:value={form.desc} placeholder="Description" rows="1"></textarea>
+    <input class="field site" bind:value={form.site} placeholder={short.split('/')[0]} spellcheck="false" />
+  </div>
+{:else if !card.fetched}
   <div class={compact ? 'ph sk' : 'sk blk'}></div>
   <div class="body">
     <div class="url">{short}</div>
