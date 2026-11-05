@@ -337,6 +337,13 @@ export function linkimage(link: string, img: item) {
   app.sel = [link]
 }
 
+/** align the text of notes */
+export function setalign(ids: string[], to: 'left' | 'center' | 'right') {
+  const align = to === 'left' ? undefined : to
+  const notes = items().filter((i) => ids.includes(i.id) && i.kind === 'note' && i.align !== align)
+  if (notes.length) update(Object.fromEntries(notes.map((i) => [i.id, { align }])))
+}
+
 /** switch links to compact, or back to large when they all are */
 export function togglelayout(ids: string[]) {
   const links = items().filter((i) => ids.includes(i.id) && i.kind === 'link')

@@ -185,6 +185,7 @@
   class:editing
   class:compact={card.kind === 'link' && card.layout === 'compact'}
   data-id={card.id}
+  data-align={card.kind === 'note' ? card.align : null}
   style:left={colw ? null : `${c.x}px`}
   style:top={colw ? null : `${c.y}px`}
   style:width={colw ? null : `${c.w}px`}

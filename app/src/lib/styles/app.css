@@ -101,3 +101,22 @@ input.col-t{font-family:inherit;line-height:inherit}
 .framed .mid{position:absolute;background:var(--sel);pointer-events:none}
 .framed .mid.x{left:50%;top:0;bottom:0;width:1px}
 .framed .mid.y{top:50%;left:0;right:0;height:1px}
+.note[data-align=center]{text-align:center}
+.note[data-align=right]{text-align:right}
+.note[data-align] ul,.note[data-align] ol{list-style-position:inside;padding-left:0}
+.note textarea{text-align:inherit}
+.note .md{display:contents}
+.note li.task{list-style:none;display:flex;column-gap:8px;margin-left:-18px}
+.note[data-align] li.task{margin-left:0;justify-content:inherit}
+.note[data-align=center] li.task{justify-content:center}
+.note[data-align=right] li.task{justify-content:flex-end}
+.note .box{flex:none;position:relative;width:14px;height:14px;margin-top:3.5px;border:1px solid var(--ink-3);border-radius:var(--r-xs);cursor:pointer;transition:background var(--d-fast) var(--ease),border-color var(--d-fast) var(--ease)}
+.note .box:hover{border-color:var(--ink-2)}
+.note .done .box{background:var(--ink);border-color:var(--ink)}
+.note .done .box::after{content:'';position:absolute;inset:0;background:var(--surface);mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M3.5 7.2l2.3 2.3 4.7-5' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/14px no-repeat}
+.note .done>span:last-child{color:var(--ink-3)}
+.note li>ul,.note li>ol{margin:0}
+.note ul ul{list-style-type:circle}
+.note li.task{flex-wrap:wrap}
+.note li.task>span:last-child{flex:1;min-width:0}
+.note li.task>ul,.note li.task>ol{flex-basis:100%;padding-left:40px}

@@ -27,6 +27,7 @@ export type item = {
   fetched?: number
 
   text?: string
+  align?: 'center' | 'right'
 
   name?: string
   collapsed?: boolean

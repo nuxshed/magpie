@@ -47,6 +47,7 @@ type item = {
   fetched?: number      // when the preview was fetched, missing while pending
   // note
   text?: string         // markdown
+  align?: 'center' | 'right'  // note text alignment, left when missing
   // column
   name?: string
   collapsed?: boolean

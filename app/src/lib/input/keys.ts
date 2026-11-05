@@ -12,6 +12,7 @@ import {
   openboard,
   redo,
   remove,
+  setalign,
   startcrop,
   togglelayout,
   undo,
@@ -29,6 +30,13 @@ const arrows: Record<string, [number, number]> = {
 
 export function typing(t: EventTarget | null) {
   return t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))
+}
+
+const alignments = { l: 'left', e: 'center', r: 'right' } as const
+
+/** the alignment a ⌘⇧L, ⌘⇧E or ⌘⇧R press asks for */
+export function alignkey(e: KeyboardEvent) {
+  if ((e.metaKey || e.ctrlKey) && e.shiftKey) return alignments[e.key.toLowerCase() as keyof typeof alignments]
 }
 
 /** enter on one selected card: edit a note, open a link or a board */
@@ -65,6 +73,11 @@ export function onkey(e: KeyboardEvent) {
   if (app.menu && k === 'escape') {
     app.menu = null
     return e.preventDefault()
+  }
+  const a = alignkey(e)
+  if (a && items().some((i) => app.sel.includes(i.id) && i.kind === 'note')) {
+    e.preventDefault()
+    return setalign(app.sel, a)
   }
   if (mod && k === 'z') e.shiftKey ? redo() : undo()
   else if (mod && e.shiftKey && k === 'c' && one?.kind === 'link') navigator.clipboard.writeText(one.url ?? '')

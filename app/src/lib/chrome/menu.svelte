@@ -11,6 +11,7 @@
     openboard,
     remove,
     sendto,
+    setalign,
     setcover,
     startcrop,
     togglelayout,
@@ -60,6 +61,12 @@
   /** pin a picture to this board's cover, or unpin it, three at most */
   const pin = (a: string) =>
     setcover(app.current, pinned.includes(a) ? pinned.filter((x) => x !== a) : [...pinned, a].slice(-3))
+
+  const aligns = [
+    ['left', 'Align left', '⌘⇧L'],
+    ['center', 'Align center', '⌘⇧E'],
+    ['right', 'Align right', '⌘⇧R']
+  ] as const
 
   const moving = () => sel.filter((i) => !app.sel.includes(i.parent ?? ''))
   const edit = (i: item) => (app.editing = i.id)
@@ -128,6 +135,11 @@
         {/if}
       {:else if one?.kind === 'note'}
         <button class="mi" type="button" onclick={() => run(() => edit(one))}>Edit note<span class="s">E</span></button>
+        {#each aligns as [a, label, key] (label)}
+          {#if (one.align ?? 'left') !== a}
+            <button class="mi" type="button" onclick={() => run(() => setalign([one.id], a))}>{label}<span class="s">{key}</span></button>
+          {/if}
+        {/each}
       {:else if one?.kind === 'column'}
         <button class="mi" type="button" onclick={() => run(() => edit(one))}>Rename</button>
         <button class="mi" type="button" onclick={() => run(() => update({ [one.id]: { collapsed: !one.collapsed } }))}>
