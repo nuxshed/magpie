@@ -12,6 +12,9 @@
   --f-display: "Fraunces", Georgia, serif;
   --f-ui: "Geist", system-ui, sans-serif;
   --f-mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --s-1: 2px; --s-2: 4px; --s-3: 6px; --s-4: 8px; --s-5: 12px;
+  --s-6: 16px; --s-7: 24px; --s-8: 32px; --s-9: 48px; --s-10: 64px;
+  --r-xs: 3px; --r-s: 4px; --r-btn: 5px; --r-m: 6px; --r-l: 8px; --r-xl: 10px;
   --d-fast: 90ms; --d-base: 140ms; --d-slow: 180ms;
   --ease: cubic-bezier(.2,.7,.2,1); --ease-settle: cubic-bezier(.3,1.25,.5,1);
 }

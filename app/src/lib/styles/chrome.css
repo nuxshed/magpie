@@ -1,0 +1,24 @@
+.app { position: fixed; inset: 0; overflow: hidden; background: var(--canvas); user-select: none; -webkit-user-select: none; touch-action: none; }
+.app.space { cursor: grab; }
+.app.panning { cursor: grabbing; }
+.world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+
+.top { position: absolute; left: 0; right: 0; top: 0; height: 56px; padding: 0 var(--s-6) 0 var(--s-7); display: flex; align-items: center; justify-content: space-between; z-index: 20; pointer-events: none; }
+.top > * { pointer-events: auto; }
+.crumbs { display: flex; align-items: baseline; gap: var(--s-3); font-size: 13px; }
+.crumbs .here { font: 26px/1 var(--f-display); color: var(--ink); margin-left: var(--s-1); }
+
+.q { appearance: none; background: none; border: 0; border-radius: var(--r-btn); padding: var(--s-3) var(--s-4); font: 13px/1 var(--f-ui); color: var(--ink-2); cursor: pointer; display: inline-flex; align-items: center; gap: var(--s-3); text-decoration: none; transition: background var(--d-fast) var(--ease); }
+.q:hover, .q.on { background: var(--surface-2); color: var(--ink); }
+.q:focus-visible { outline: 2px solid var(--sel); outline-offset: 2px; }
+.q svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.5; }
+
+.bl { position: absolute; left: var(--s-6); bottom: var(--s-5); display: flex; gap: var(--s-1); z-index: 20; }
+.br { position: absolute; right: var(--s-6); bottom: var(--s-5); display: flex; gap: var(--s-1); align-items: center; z-index: 20; }
+.br .q:nth-child(2) { min-width: 52px; justify-content: center; font-variant-numeric: tabular-nums; }
+
+.pop { position: absolute; background: var(--surface); border-radius: var(--r-l); box-shadow: var(--sh-pop); z-index: 30; }
+.bar { display: flex; gap: var(--s-1); padding: 3px; align-items: center; }
+.bar .count { font-size: 12px; color: var(--ink-3); padding: 0 var(--s-4) 0 var(--s-3); }
+.selbox { position: absolute; border: 1px solid var(--sel-line); border-radius: var(--r-s); pointer-events: none; z-index: 10; }
+.marquee { position: absolute; border: 1px solid var(--sel-line); background: var(--sel-fill); pointer-events: none; z-index: 10; }
