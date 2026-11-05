@@ -32,14 +32,17 @@ export function render(md: string) {
     if (!list) out.push(`<${(list = tag)}>`)
     out.push(`<li>${inline(text)}</li>`)
   }
-  for (const line of esc(md).split('\n')) {
+  for (const line of esc(md.replace(/^\s*\n|\n\s*$/g, '')).split('\n')) {
     let m
     if ((m = line.match(/^#{1,6}\s+(.*)/))) {
       close()
       out.push(`<h3>${inline(m[1])}</h3>`)
     } else if ((m = line.match(/^\s*[-*]\s+(.*)/))) item('ul', m[1])
     else if ((m = line.match(/^\s*\d+[.)]\s+(.*)/))) item('ol', m[1])
-    else if (!line.trim()) close()
+    else if (!line.trim()) {
+      close()
+      out.push('<br>')
+    }
     else {
       if (list) close()
       para.push(inline(line))
