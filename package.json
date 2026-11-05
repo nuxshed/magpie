@@ -1,0 +1,11 @@
+{
+  "name": "magpie",
+  "private": true,
+  "workspaces": ["app", "worker"],
+  "scripts": {
+    "dev": "bun run --cwd app dev",
+    "check": "bun run --cwd app check",
+    "build": "bun run --cwd app build",
+    "worker": "bun run --cwd worker dev"
+  }
+}
