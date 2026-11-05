@@ -11,13 +11,14 @@
     openboard,
     remove,
     sendto,
+    setcover,
     togglelayout,
     up,
     update
   } from '../board.svelte'
   import { fit, toworld } from '../canvas/view.svelte'
   import { pickthumb } from '../input/paste'
-  import { openlink, type item } from '../model'
+  import { openlink, picture, type item } from '../model'
 
   let h = $state(0)
   const sel = $derived(items().filter((i) => app.sel.includes(i.id)))
@@ -50,6 +51,14 @@
     app.menu = null
     fn()
   }
+
+  const pic = $derived(one && app.current !== 'home' ? picture(one) : undefined)
+  const pinned = $derived(current()?.cover ?? [])
+  const child = $derived(one?.kind === 'board' ? app.boards[one.board ?? ''] : undefined)
+
+  /** pin a picture to this board's cover, or unpin it, three at most */
+  const pin = (a: string) =>
+    setcover(app.current, pinned.includes(a) ? pinned.filter((x) => x !== a) : [...pinned, a].slice(-3))
 
   const moving = () => sel.filter((i) => !app.sel.includes(i.parent ?? ''))
   const edit = (i: item) => (app.editing = i.id)
@@ -113,6 +122,9 @@
       {:else if one?.kind === 'board'}
         <button class="mi" type="button" onclick={() => run(() => openboard(one))}>Open board<span class="s">↵</span></button>
         <button class="mi" type="button" onclick={() => run(() => edit(one))}>Rename</button>
+        {#if child}
+          <button class="mi" type="button" onclick={() => run(() => (app.covering = child.id))}>Choose cover…</button>
+        {/if}
       {:else if one?.kind === 'note'}
         <button class="mi" type="button" onclick={() => run(() => edit(one))}>Edit note<span class="s">E</span></button>
       {:else if one?.kind === 'column'}
@@ -121,7 +133,12 @@
           {one.collapsed ? 'Expand' : 'Collapse'}
         </button>
       {/if}
-      {#if one && one.kind !== 'image'}<div class="msep"></div>{/if}
+      {#if pic}
+        <button class="mi" type="button" onclick={() => run(() => pin(pic))}>
+          {pinned.includes(pic) ? 'Remove from cover' : 'Add to cover'}
+        </button>
+      {/if}
+      {#if one && (one.kind !== 'image' || pic)}<div class="msep"></div>{/if}
       <button class="mi" type="button" onclick={() => run(() => duplicate(app.sel))}>Duplicate<span class="s">⌘D</span></button>
       {#if one?.kind === 'link'}
         <button class="mi" type="button" onclick={() => run(() => navigator.clipboard.writeText(one.url ?? ''))}>

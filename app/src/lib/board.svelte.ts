@@ -1,5 +1,5 @@
 import { goto } from '$app/navigation'
-import { newid, widths, type board, type draft, type item } from './model'
+import { newid, picture, widths, type board, type draft, type item } from './model'
 import { all, put } from './store/db'
 
 type change = { before: item | null; after: item; board?: string }
@@ -22,6 +22,7 @@ export const app = $state({
   visits: {} as Record<string, { n: number; seen: number }>,
   guides: [] as { x: number; y: number; w: number; h: number }[],
   menu: null as { x: number; y: number; pick?: boolean } | null,
+  covering: null as string | null,
   ready: false
 })
 
@@ -287,6 +288,29 @@ export function add(list: draft[], t?: target | null, meta: meta[] = []) {
 /** patch cards by id */
 export function update(patches: Record<string, Partial<item>>) {
   commit(patch(patches))
+}
+
+/** pictures shown by cards on a board, then those in its boards */
+export function pictures(id: string, seen = new Set<string>()): string[] {
+  const list = app.boards[id]?.items.filter((i) => !i.deleted)
+  if (!list || seen.has(id)) return []
+  seen.add(id)
+  const own = list.map(picture).filter((a) => !!a)
+  return [...new Set([...own, ...list.flatMap((i) => (i.kind === 'board' && i.board ? pictures(i.board, seen) : []))])]
+}
+
+/** a board's cover: pinned pictures, then its own, or those in its boards when it has none */
+export function cover(id: string) {
+  const b = app.boards[id]
+  const all = pictures(id)
+  const own = b?.items.filter((i) => !i.deleted).map(picture).filter((a) => !!a) ?? []
+  return [...new Set([...(b?.cover ?? []).filter((a) => all.includes(a)), ...(own.length ? own : all)])].slice(0, 3)
+}
+
+/** set a board's pinned cover pictures, none for automatic */
+export function setcover(id: string, cover: string[] = []) {
+  const b = app.boards[id]
+  if (b) commit([], [{ id, before: { cover: b.cover }, after: { cover: cover.length ? cover : undefined } }])
 }
 
 /** use an image card as a link's image, taking the image card off the board */

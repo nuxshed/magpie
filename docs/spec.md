@@ -57,6 +57,7 @@ type board = {
   id: string            // 'home' for the root
   name: string
   parent?: string       // parent board id, for breadcrumbs
+  cover?: string[]      // asset ids pinned to the board card cover, first is the big one
   items: item[]
   updated: number
   deleted?: boolean
@@ -64,6 +65,7 @@ type board = {
 ```
 
 - Board card name, item count and cover are computed from the child board, which is always in IndexedDB. Nothing is duplicated.
+- Cover: pinned pictures first, then the first image and link pictures on the board, three in all. A board with no pictures uses the ones in its boards.
 - Deleting a board card marks the child board deleted, so undo can bring it back.
 - Viewport (pan, zoom) is saved per board in IndexedDB, not synced.
 

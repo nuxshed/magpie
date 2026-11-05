@@ -37,6 +37,7 @@ export type board = {
   id: string
   name: string
   parent?: string
+  cover?: string[]
   items: item[]
   updated: number
   deleted?: boolean
@@ -50,6 +51,9 @@ export const grid = 8
 /** round to the nearest grid line */
 export const snap = (n: number) => Math.round(n / grid) * grid
 export const widths = { image: 260, link: 256, note: 256, column: 272, board: 220 }
+
+/** the asset a card shows as its picture, if any */
+export const picture = (i: item) => (i.kind === 'image' ? i.asset : i.kind === 'link' ? i.thumb : undefined)
 
 /** open a link in a new tab, http and https only */
 export function openlink(url = '') {

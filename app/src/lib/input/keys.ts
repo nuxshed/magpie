@@ -51,6 +51,10 @@ export function onkey(e: KeyboardEvent) {
   const mod = e.metaKey || e.ctrlKey
   const k = e.key.toLowerCase()
   const one = app.sel.length === 1 ? getitem(app.sel[0]) : undefined
+  if (app.covering) {
+    if (k === 'escape') app.covering = null
+    return
+  }
   if (app.menu && k === 'escape') {
     app.menu = null
     return e.preventDefault()

@@ -7,6 +7,7 @@
   import type { item } from '../model'
   import Card from '../cards/card.svelte'
   import Add from '../chrome/add.svelte'
+  import Coverpick from '../chrome/coverpick.svelte'
   import Menu from '../chrome/menu.svelte'
   import Selbar from '../chrome/selbar.svelte'
   import Top from '../chrome/top.svelte'
@@ -280,6 +281,7 @@
   {/if}
   <Selbar />
   <Menu />
+  <Coverpick />
   <Top />
   <Add />
   <Zoom />
