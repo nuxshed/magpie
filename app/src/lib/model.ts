@@ -60,6 +60,19 @@ export const widths = { image: 260, link: 256, note: 256, column: 272, board: 22
 /** the asset a card shows as its picture, if any */
 export const picture = (i: item) => (i.kind === 'image' ? i.asset : i.kind === 'link' ? i.thumb : undefined)
 
+/** a picture's frame aspect: its crop's, else its own for images, square for spotify links and wide for other links */
+export function frameof(i: item) {
+  if (i.crop?.r) return i.crop.r
+  if (i.kind !== 'link') return i.aspect ?? 1
+  return /^https?:\/\/([a-z]+\.)?spotify\.(com|link)\//i.test(i.url ?? '') ? 1 : 1.91
+}
+
+/** the natural aspect of a card's rendered picture */
+export function natural(id: string) {
+  const i = document.querySelector<HTMLImageElement>(`[data-id="${id}"] .clip img`)
+  return i?.naturalWidth ? i.naturalWidth / i.naturalHeight : undefined
+}
+
 /** open a link in a new tab, http and https only */
 export function openlink(url = '') {
   if (/^https?:\/\//i.test(url)) window.open(url, '_blank', 'noopener')

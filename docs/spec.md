@@ -110,7 +110,7 @@ Magpie/
 
 Two endpoints, both GET, CORS limited to `ALLOWED_ORIGIN`, public http/https URLs only (400 otherwise), browser user agent, redirects followed, 5s timeout.
 
-- `/preview?url=` → `{ url, title, desc, site, image }`, always 200 with whatever was found. Parsed with `HTMLRewriter` from the page head, up to `<body>`: title from og, twitter, `<title>`; desc from og, twitter, meta description; image from og, twitter; site from og:site_name, else the hostname. JSON-LD fills in title, desc and image when the tags are missing. Relative image URLs resolve against the final URL. Cached 1 day, failures 10 minutes.
+- `/preview?url=` → `{ url, title, desc, site, image }`, always 200 with whatever was found. Parsed with `HTMLRewriter` from the page head, up to `<body>`: title from og, twitter, `<title>`; desc from og, twitter, meta description; image from og, twitter; site from og:site_name, else the hostname. JSON-LD fills in title, desc and image when the tags are missing. Relative image URLs resolve against the final URL. An oEmbed endpoint, advertised by the page or known (Spotify), gives the title, thumbnail and provider. Spotify adds artist and kind from its embed page; Amazon reads on past `<body>` to the product image. Cached 1 day, failures 10 minutes.
 - `/image?url=&ref=` → the image bytes, `ref` sent as Referer. Raster image types only, no SVG, max 10MB. The app compresses the result (1200px long edge) and saves it as an asset, so link thumbnails survive the site going away.
 
 ## Undo

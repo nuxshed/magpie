@@ -1,7 +1,7 @@
 <script lang="ts">
   import { tick, untrack } from 'svelte'
   import { app, update } from '../board.svelte'
-  import type { item } from '../model'
+  import { frameof, type item } from '../model'
   import Framed from './framed.svelte'
   import Picture from './picture.svelte'
 
@@ -13,7 +13,7 @@
   const compact = $derived(card.layout === 'compact')
   const editing = $derived(app.editing === card.id)
   const cropping = $derived(app.cropping === card.id)
-  const r = $derived(compact ? 1 : (card.crop?.r ?? 1.91))
+  const r = $derived(compact ? 1 : frameof(card))
 
   let form = $state({ title: '', desc: '', site: '' })
   let box = $state<HTMLDivElement>()

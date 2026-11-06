@@ -20,7 +20,7 @@
   } from '../board.svelte'
   import { fit, toworld } from '../canvas/view.svelte'
   import { pickthumb } from '../input/paste'
-  import { openlink, picture, type item } from '../model'
+  import { natural, openlink, picture, type item } from '../model'
 
   let h = $state(0)
   const sel = $derived(items().filter((i) => app.sel.includes(i.id)))
@@ -67,6 +67,12 @@
     ['center', 'Align center', '⌘⇧E'],
     ['right', 'Align right', '⌘⇧R']
   ] as const
+
+  /** frame a link's picture in its own shape, or back to the default */
+  function shape(i: item) {
+    const r = i.crop?.r ? undefined : natural(i.id)
+    if (i.crop?.r || r) update({ [i.id]: { crop: { z: 1, x: 0, y: 0, ...i.crop, r } } })
+  }
 
   const moving = () => sel.filter((i) => !app.sel.includes(i.parent ?? ''))
   const edit = (i: item) => (app.editing = i.id)
@@ -122,6 +128,11 @@
           {one.layout === 'compact' ? 'Large' : 'Compact'}<span class="s">L</span>
         </button>
         <button class="mi" type="button" onclick={() => run(() => pickthumb(one.id))}>Change image…</button>
+        {#if one.thumb && one.layout !== 'compact'}
+          <button class="mi" type="button" onclick={() => run(() => shape(one))}>
+            {one.crop?.r ? 'Default shape' : 'Image shape'}
+          </button>
+        {/if}
         {#if one.thumb}
           <button class="mi" type="button" onclick={() => run(() => update({ [one.id]: { thumb: undefined } }))}>
             Remove image

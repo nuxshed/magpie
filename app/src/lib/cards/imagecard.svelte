@@ -1,12 +1,12 @@
 <script lang="ts">
   import { app } from '../board.svelte'
-  import type { item } from '../model'
+  import { frameof, type item } from '../model'
   import Framed from './framed.svelte'
 
   let { card, solo, resize }: { card: item; solo: boolean; resize: (e: PointerEvent, dir: string) => void } =
     $props()
 
-  const r = $derived(card.crop?.r ?? card.aspect ?? 1)
+  const r = $derived(frameof(card))
   const cropping = $derived(app.cropping === card.id)
 </script>
 

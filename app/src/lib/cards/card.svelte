@@ -8,7 +8,7 @@
   import { align, edge } from '../canvas/guides'
   import { onscreen, toworld, view } from '../canvas/view.svelte'
   import { track } from '../input/track'
-  import { minw, openlink, type item } from '../model'
+  import { frameof, minw, openlink, type item } from '../model'
   import Boardcard from './boardcard.svelte'
   import Columncard from './columncard.svelte'
   import Imagecard from './imagecard.svelte'
@@ -120,7 +120,7 @@
   /** right edge sets width; image corners keep aspect and pin the opposite corner */
   function resize(e: PointerEvent, dir: string) {
     e.stopPropagation()
-    const s = { x: c.x, y: c.y, w: c.w, h: app.heights[card.id] ?? 0, aspect: c.crop?.r ?? c.aspect ?? 1 }
+    const s = { x: c.x, y: c.y, w: c.w, h: app.heights[card.id] ?? 0, aspect: frameof(c) }
     const others = items()
       .filter((i) => !i.parent && i.id !== card.id)
       .map(rect)

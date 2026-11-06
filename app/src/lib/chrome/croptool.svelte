@@ -1,11 +1,11 @@
 <script lang="ts">
   import { app, endcrop, getitem } from '../board.svelte'
-  import type { frame } from '../model'
+  import { frameof, natural as own, type frame } from '../model'
 
   const it = $derived(app.cropping ? getitem(app.cropping) : undefined)
   const draft = $derived(it && app.live[it.id] && 'crop' in app.live[it.id] ? app.live[it.id].crop : it?.crop)
   const compact = $derived(it?.kind === 'link' && it.layout === 'compact')
-  const r = $derived(compact ? 1 : (draft?.r ?? (it?.kind === 'link' ? 1.91 : (it?.aspect ?? 1))))
+  const r = $derived(it ? (compact ? 1 : frameof({ ...it, crop: draft })) : 1)
   const colors = ['#ffffff', '#f2f1ee', '#1c1c1a', '#000000']
   let h = $state(0)
 
@@ -18,11 +18,7 @@
     return { x: Math.max(16, b.left), y }
   })
 
-  /** the picture's own aspect, read from the rendered image */
-  function natural() {
-    const i = document.querySelector<HTMLImageElement>(`[data-id="${it?.id}"] .clip img`)
-    return i?.naturalWidth ? i.naturalWidth / i.naturalHeight : r
-  }
+  const natural = () => own(it?.id ?? '') ?? r
 
   function set(p: Partial<frame> | undefined) {
     if (it) app.live[it.id] = { crop: p && { z: 1, x: 0, y: 0, ...draft, r, ...p } }

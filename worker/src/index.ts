@@ -79,10 +79,11 @@ function place(u: URL) {
   }
 }
 
-/** read the head of a page for its preview fields */
-async function parse(res: Response) {
+/** read the head of a page for its preview fields, and on amazon on to the product image */
+async function parse(res: Response, amazon = false) {
   const meta: Record<string, string> = {}
   let title = ''
+  let oembed: string | undefined
   let ld = ''
   const lds: string[] = []
   let done = false
@@ -92,6 +93,11 @@ async function parse(res: Response) {
         const k = (e.getAttribute('property') ?? e.getAttribute('name') ?? '').toLowerCase()
         const v = e.getAttribute('content')
         if (k && v && !(k in meta)) meta[k] = v
+      }
+    })
+    .on('link[type="application/json+oembed"]', {
+      element(e) {
+        oembed ??= e.getAttribute('href') ?? undefined
       }
     })
     .on('title', {
@@ -110,9 +116,16 @@ async function parse(res: Response) {
         ld += t.text
       }
     })
+    .on('img#landingImage', {
+      element(e) {
+        const v = e.getAttribute('data-old-hires') || e.getAttribute('src')
+        if (v) meta['og:image'] ??= v
+        done = true
+      }
+    })
     .on('body', {
       element() {
-        done = true
+        if (!amazon) done = true
       }
     })
   const reader = rw.transform(res).body!.getReader()
@@ -127,8 +140,45 @@ async function parse(res: Response) {
     title: clean(meta['og:title'] ?? meta['twitter:title'] ?? (title || undefined) ?? j.title),
     desc: clean(meta['og:description'] ?? meta['twitter:description'] ?? meta['description'] ?? j.desc),
     site: clean(meta['og:site_name']),
+    oembed,
     image: meta['og:image'] ?? meta['og:image:url'] ?? meta['twitter:image'] ?? meta['twitter:image:src'] ?? j.image
   }
+}
+
+/** oembed endpoints for sites that serve browsers an empty app shell */
+function known(u: URL) {
+  if (/(^|\.)spotify\.com$/.test(u.hostname)) return `https://open.spotify.com/oembed?url=${encodeURIComponent(u.href)}`
+}
+
+/** artist and kind for a spotify link, from its embed page */
+async function spotify(u: URL) {
+  const m = u.pathname.match(/^\/(?:intl-[a-z-]+\/)?(album|track|playlist|artist|episode|show)\/(\w+)/)
+  if (!m || !/(^|\.)spotify\.com$/.test(u.hostname)) return
+  const kind = m[1][0].toUpperCase() + m[1].slice(1)
+  try {
+    const res = await fetch(`https://open.spotify.com/embed/${m[1]}/${m[2]}`, {
+      headers: { 'user-agent': agent },
+      signal: AbortSignal.timeout(3000)
+    })
+    const page = await res.text()
+    const str = '"((?:[^"\\\\]|\\\\.)*)"'
+    const sub = (page.match(new RegExp(`"subtitle":${str}`)) ?? page.match(new RegExp(`"artists":\\[\\{"name":${str}`)))?.[1]
+    return [sub && clean(JSON.parse(`"${sub}"`)), kind].filter(Boolean).join(' · ')
+  } catch {
+    return kind
+  }
+}
+
+/** title, thumbnail and provider from an oembed endpoint */
+async function fromembed(href: string, base: string) {
+  const u = weburl(decode(href), base)
+  if (!u) return
+  try {
+    const res = await fetch(u.href, { headers: { 'user-agent': agent }, signal: AbortSignal.timeout(3000) })
+    const o = res.ok ? await res.json<Record<string, unknown>>() : {}
+    const s = (v: unknown) => (typeof v === 'string' ? v : undefined)
+    return { title: clean(s(o.title)), site: clean(s(o.provider_name)), image: s(o.thumbnail_url) && weburl(s(o.thumbnail_url)!)?.href }
+  } catch {}
 }
 
 /** fetch a page and build its preview, never throwing */
@@ -136,6 +186,7 @@ async function preview(url: URL): Promise<{ data: info; ok: boolean }> {
   const data: info = { url: url.href, site: url.hostname.replace(/^www\./, '') }
   let end = url
   let ok = false
+  let embed: string | undefined
   try {
     const res = await fetch(url.href, {
       headers: { 'user-agent': agent, accept: 'text/html,application/xhtml+xml', 'accept-language': 'en' },
@@ -145,12 +196,22 @@ async function preview(url: URL): Promise<{ data: info; ok: boolean }> {
     end = new URL(res.url || url.href)
     data.site = end.hostname.replace(/^www\./, '')
     if (res.ok && (res.headers.get('content-type') ?? '').includes('text/html')) {
-      const p = await parse(res)
+      const p = await parse(res, /(^|\.)amazon\.[a-z.]+$/.test(end.hostname))
       Object.assign(data, { title: p.title, desc: p.desc, site: p.site ?? data.site })
       data.image = p.image ? weburl(decode(p.image), end.href)?.href : undefined
       ok = !!(p.title || p.desc || p.image)
+      embed = p.oembed
     } else res.body?.cancel()
   } catch {}
+  const e = embed ?? known(end) ?? known(url)
+  const o = e ? await fromembed(e, end.href) : undefined
+  if (o?.title || o?.image) {
+    const host = end.hostname.replace(/^www\./, '')
+    Object.assign(data, { title: o.title ?? data.title, image: data.image ?? o.image })
+    if (data.site === host) data.site = o.site ?? host
+    data.desc = (await spotify(end)) ?? data.desc
+    ok = true
+  }
   const name = place(end) ?? place(url)
   if (name) Object.assign(data, { title: name, desc: undefined, site: 'Google Maps' })
   return { data, ok }
@@ -210,7 +271,7 @@ export default {
     if (pathname === '/image') return image(url!, weburl(searchParams.get('ref')), cors)
 
     if (pathname === '/preview') {
-      const key = new Request(`https://preview.cache/?url=${encodeURIComponent(url!.href)}`)
+      const key = new Request(`https://preview.cache/3?url=${encodeURIComponent(url!.href)}`)
       const hit = await caches.default.match(key)
       if (hit) return new Response(hit.body, { headers: { ...cors, 'content-type': 'application/json' } })
       const { data, ok } = await preview(url!)
