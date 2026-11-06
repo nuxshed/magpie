@@ -1,7 +1,7 @@
 import { PUBLIC_GOOGLE_CLIENT_ID } from '$app/env/public'
 
 type reply = { access_token?: string; expires_in?: number; error?: string }
-type client = { requestAccessToken: (o: { prompt: string }) => void }
+type client = { requestAccessToken: (o: { prompt: string; hint?: string }) => void }
 
 declare global {
   interface Window {
@@ -14,6 +14,7 @@ let exp = 0
 let gis: Promise<client> | undefined
 let asking: { ok: (t: string) => void; fail: (e: Error) => void } | undefined
 let pending: Promise<string> | undefined
+let stuck = false
 
 /** whether this browser has signed in before */
 export const signed = () => !!localStorage.getItem('signed')
@@ -33,6 +34,7 @@ export function load() {
               tok = r.access_token
               exp = Date.now() + (r.expires_in ?? 3600) * 1000
               asking?.ok(tok)
+              if (!localStorage.getItem('email')) remember().catch(() => {})
             } else asking?.fail(new Error('auth'))
           },
           error_callback: () => asking?.fail(new Error('auth'))
@@ -51,17 +53,25 @@ function request(c: client, prompt: string) {
   asking?.fail(new Error('auth'))
   return new Promise<string>((ok, fail) => {
     asking = { ok, fail }
-    c.requestAccessToken({ prompt })
+    c.requestAccessToken({ prompt, hint: localStorage.getItem('email') ?? undefined })
   })
+}
+
+/** keep the account email, so later popups pick the account and close by themselves */
+async function remember() {
+  const r = await fetch('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)', { headers: { Authorization: `Bearer ${tok}` } })
+  const email = r.ok ? (await r.json()).user?.emailAddress : undefined
+  if (email) localStorage.setItem('email', email)
 }
 
 /** sign in from a click, remembering it for later visits */
 export async function signin() {
   await request(await load(), 'select_account')
+  stuck = false
   localStorage.setItem('signed', '1')
 }
 
-/** refresh quietly, else on the next click or keypress, since browsers block popups outside one */
+/** refresh quietly, else on the next click or keypress, since browsers block popups outside one, and stop asking when that fails too */
 async function refresh() {
   const c = await load()
   try {
@@ -72,7 +82,11 @@ async function refresh() {
         removeEventListener('pointerdown', go, true)
         removeEventListener('keydown', go, true)
         if (live()) ok(tok)
-        else request(c, '').then(ok, fail)
+        else
+          request(c, '').then(ok, (e) => {
+            stuck = true
+            fail(e)
+          })
       }
       addEventListener('pointerdown', go, true)
       addEventListener('keydown', go, true)
@@ -80,9 +94,10 @@ async function refresh() {
   }
 }
 
-/** a live token, refreshed when it is close to expiring */
+/** a live token, refreshed when it is close to expiring, none until signing in again once a refresh failed */
 export function token() {
   if (live()) return Promise.resolve(tok)
+  if (stuck) return Promise.reject(new Error('auth'))
   return (pending ??= refresh().finally(() => (pending = undefined)))
 }
 
@@ -104,4 +119,5 @@ export async function call(url: string, init: RequestInit = {}) {
 export function forget() {
   tok = ''
   localStorage.removeItem('signed')
+  localStorage.removeItem('email')
 }
