@@ -4,3 +4,4 @@ build
 .wrangler
 .env
 .claude
+design/
