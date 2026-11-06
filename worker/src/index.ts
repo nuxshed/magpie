@@ -1,6 +1,6 @@
-interface Env {
-  ALLOWED_ORIGIN: string
-}
+import { auth, type Keys } from './auth'
+
+type Env = Keys
 
 type info = { url: string; title?: string; desc?: string; site?: string; image?: string }
 
@@ -260,8 +260,9 @@ export default {
       'access-control-allow-methods': 'GET',
       vary: 'origin'
     }
-    if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors })
     const { pathname, searchParams } = new URL(req.url)
+    if (pathname.startsWith('/auth/')) return auth(req, env, pathname)
+    if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors })
     if (req.method !== 'GET') return new Response('not found', { status: 404, headers: cors })
 
     const url = weburl(searchParams.get('url'))

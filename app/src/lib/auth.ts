@@ -1,42 +1,37 @@
-import { PUBLIC_GOOGLE_CLIENT_ID } from '$app/env/public'
+import { PUBLIC_GOOGLE_CLIENT_ID, PUBLIC_PREVIEW_URL } from '$app/env/public'
 
-type reply = { access_token?: string; expires_in?: number; error?: string }
-type client = { requestAccessToken: (o: { prompt: string; hint?: string }) => void }
+type reply = { code?: string; error?: string }
+type client = { requestCode: () => void }
 
 declare global {
   interface Window {
-    google?: { accounts: { oauth2: { initTokenClient: (o: object) => client } } }
+    google?: { accounts: { oauth2: { initCodeClient: (o: object) => client } } }
   }
 }
 
 let tok = ''
 let exp = 0
 let gis: Promise<client> | undefined
-let asking: { ok: (t: string) => void; fail: (e: Error) => void } | undefined
+let asking: { ok: (c: string) => void; fail: (e: Error) => void } | undefined
 let pending: Promise<string> | undefined
 let stuck = false
 
 /** whether this browser has signed in before */
 export const signed = () => !!localStorage.getItem('signed')
 
-/** load google's script and make the token client once */
+/** load google's script and make the code client once */
 export function load() {
   return (gis ??= new Promise((ok, fail) => {
     const s = document.createElement('script')
     s.src = 'https://accounts.google.com/gsi/client'
     s.onload = () =>
       ok(
-        window.google!.accounts.oauth2.initTokenClient({
+        window.google!.accounts.oauth2.initCodeClient({
           client_id: PUBLIC_GOOGLE_CLIENT_ID,
           scope: 'https://www.googleapis.com/auth/drive.file',
-          callback: (r: reply) => {
-            if (r.access_token) {
-              tok = r.access_token
-              exp = Date.now() + (r.expires_in ?? 3600) * 1000
-              asking?.ok(tok)
-              if (!localStorage.getItem('email')) remember().catch(() => {})
-            } else asking?.fail(new Error('auth'))
-          },
+          ux_mode: 'popup',
+          prompt: 'consent',
+          callback: (r: reply) => (r.code ? asking?.ok(r.code) : asking?.fail(new Error('auth'))),
           error_callback: () => asking?.fail(new Error('auth'))
         })
       )
@@ -48,60 +43,42 @@ export function load() {
   }))
 }
 
-/** ask google for a token, the client must be loaded so the popup opens inside a click */
-function request(c: client, prompt: string) {
-  asking?.fail(new Error('auth'))
-  return new Promise<string>((ok, fail) => {
-    asking = { ok, fail }
-    c.requestAccessToken({ prompt, hint: localStorage.getItem('email') ?? undefined })
-  })
+/** post to the worker's auth routes, which keep the refresh token in a cookie, and keep the access token it returns */
+async function post(path: string, body?: string) {
+  const res = await fetch(`${PUBLIC_PREVIEW_URL}/auth/${path}`, { method: 'POST', body, credentials: 'include', keepalive: true })
+  if (res.status === 401) throw new Error('auth')
+  if (!res.ok) throw new Error('worker')
+  if (res.status === 204) return ''
+  const r: { access_token: string; expires_in: number } = await res.json()
+  tok = r.access_token
+  exp = Date.now() + r.expires_in * 1000
+  return tok
 }
 
-/** keep the account email, so later popups pick the account and close by themselves */
-async function remember() {
-  const r = await fetch('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)', { headers: { Authorization: `Bearer ${tok}` } })
-  const email = r.ok ? (await r.json()).user?.emailAddress : undefined
-  if (email) localStorage.setItem('email', email)
-}
-
-/** sign in from a click, remembering it for later visits */
+/** sign in from a click, so the popup can open, remembering it for later visits */
 export async function signin() {
-  await request(await load(), 'select_account')
+  const c = await load()
+  const code = await new Promise<string>((ok, fail) => {
+    asking?.fail(new Error('auth'))
+    asking = { ok, fail }
+    c.requestCode()
+  })
+  await post('code', code)
   stuck = false
   localStorage.setItem('signed', '1')
 }
 
-/** refresh quietly, else on the next click or keypress, since browsers block popups outside one, and stop asking when that fails too */
-async function refresh() {
-  const c = await load()
-  try {
-    return await request(c, '')
-  } catch {
-    return new Promise<string>((ok, fail) => {
-      const go = () => {
-        removeEventListener('pointerdown', go, true)
-        removeEventListener('keydown', go, true)
-        if (live()) ok(tok)
-        else
-          request(c, '').then(ok, (e) => {
-            stuck = true
-            fail(e)
-          })
-      }
-      addEventListener('pointerdown', go, true)
-      addEventListener('keydown', go, true)
-    })
-  }
-}
-
-/** a live token, refreshed when it is close to expiring, none until signing in again once a refresh failed */
+/** a live token, refreshed quietly by the worker, none until signing in again once the worker turns it down */
 export function token() {
-  if (live()) return Promise.resolve(tok)
+  if (tok && Date.now() < exp - 60e3) return Promise.resolve(tok)
   if (stuck) return Promise.reject(new Error('auth'))
-  return (pending ??= refresh().finally(() => (pending = undefined)))
+  return (pending ??= post('refresh')
+    .catch((e) => {
+      if (e.message === 'auth') stuck = true
+      throw e
+    })
+    .finally(() => (pending = undefined)))
 }
-
-const live = () => !!tok && Date.now() < exp - 60e3
 
 /** fetch with the token, refreshing and retrying once on a 401 */
 export async function call(url: string, init: RequestInit = {}) {
@@ -115,9 +92,9 @@ export async function call(url: string, init: RequestInit = {}) {
   return res
 }
 
-/** forget the token and the sign-in */
+/** forget the token and the sign-in, and have the worker revoke the refresh token */
 export function forget() {
   tok = ''
+  post('out').catch(() => {})
   localStorage.removeItem('signed')
-  localStorage.removeItem('email')
 }

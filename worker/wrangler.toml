@@ -4,6 +4,8 @@ compatibility_date = "2026-11-01"
 
 [vars]
 ALLOWED_ORIGIN = "https://mymagpie.pages.dev"
+GOOGLE_CLIENT_ID = "908100805284-d7r6992edc2sb510vkbldlommnc8602a.apps.googleusercontent.com"
 
 [env.dev.vars]
 ALLOWED_ORIGIN = "http://localhost:5173"
+GOOGLE_CLIENT_ID = "908100805284-d7r6992edc2sb510vkbldlommnc8602a.apps.googleusercontent.com"
