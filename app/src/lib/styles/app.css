@@ -120,3 +120,10 @@ input.col-t{font-family:inherit;line-height:inherit}
 .note li.task{flex-wrap:wrap}
 .note li.task>span:last-child{flex:1;min-width:0}
 .note li.task>ul,.note li.task>ol{flex-basis:100%;padding-left:40px}
+.btn-p{appearance:none;border:0;border-radius:var(--r-btn);background:var(--accent);color:var(--accent-ink);font:500 13px/1 var(--f-ui);padding:8px 12px;cursor:pointer}
+.sync.q{color:var(--ink)}
+.syncerr{right:16px;top:50px;width:300px;padding:14px 16px;z-index:40}
+.syncerr .t{font-weight:500;font-size:13px}
+.syncerr .d{font-size:12.5px;color:var(--ink-2);margin-top:4px}
+.syncerr .row{display:flex;gap:6px;margin-top:12px}
+.menu.more{right:16px;top:50px;width:auto;min-width:160px;transform-origin:100% 0}

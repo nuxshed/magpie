@@ -52,8 +52,9 @@ async function cover(names: [string, string][], text: string) {
   return [...list, note(40, 340, 256, text)]
 }
 
-/** home, a few boards, and the vietnam board from the main mockup */
+/** home, a few boards, and the vietnam board from the main mockup, never synced */
 export async function seed() {
+  localStorage.setItem('seeded', '1')
   const vietnam = sheet('vietnam', 'Vietnam', 'travel', [
     await img('lan-ha-bay.jpg', '#5F7782', 40, 84, 300, 400, 'Lan Hạ side is quieter than Hạ Long proper.'),
     await img('saigon-district-1.gif', '#334055', 40, 540, 300, 200, 'District 1 at 11pm.'),

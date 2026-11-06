@@ -1,4 +1,6 @@
 import { get, put } from './db'
+import { getasset } from './drive'
+import { syncing } from './sync'
 
 const maxedge = 2000
 
@@ -20,8 +22,24 @@ export async function saveimage(file: Blob, edge = maxedge) {
   }
   bmp.close()
   const asset = await hash(blob)
-  await put('assets', asset, blob)
+  if (!(await get('assets', asset))) {
+    await put('assets', asset, blob)
+    await put('queue', asset, 1)
+  }
   return { asset, aspect }
 }
 
-export const loadasset = (id: string) => get<Blob>('assets', id)
+const loading: Record<string, Promise<Blob | undefined>> = {}
+
+/** an asset from indexeddb, else from drive, cached once downloaded */
+export async function loadasset(id: string) {
+  const local = await get<Blob>('assets', id)
+  if (local || !syncing()) return local
+  return (loading[id] ??= getasset(id)
+    .then(async (b) => {
+      if (b) await put('assets', id, b)
+      return b
+    })
+    .catch(() => undefined)
+    .finally(() => delete loading[id]))
+}

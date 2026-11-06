@@ -1,6 +1,8 @@
 import { goto } from '$app/navigation'
 import { newid, picture, widths, type board, type draft, type item } from './model'
 import { all, put } from './store/db'
+import { merge } from './store/merge'
+import { changed, type status } from './store/sync'
 
 type change = { before: item | null; after: item; board?: string }
 type meta = { id: string; before: Partial<board>; after: Partial<board> }
@@ -24,6 +26,7 @@ export const app = $state({
   menu: null as { x: number; y: number; pick?: boolean } | null,
   covering: null as string | null,
   cropping: null as string | null,
+  sync: 'saved' as status,
   ready: false
 })
 
@@ -176,6 +179,7 @@ function write(b: board, next: item) {
 function save(b: board) {
   b.updated = Date.now()
   put('boards', b.id, $state.snapshot(b))
+  changed(b.id)
 }
 
 function setmeta(m: meta, back: boolean) {
@@ -271,6 +275,23 @@ export function system(patches: Record<string, Partial<item>>) {
       Object.assign(c.after, p)
       if (c.before) Object.assign(c.before, p)
     }
+}
+
+/** merge in a board from drive, with no undo step and no new timestamps */
+export function absorb(theirs: board) {
+  const mine = app.boards[theirs.id]
+  const next = mine ? merge($state.snapshot(mine), theirs) : theirs
+  if (mine && JSON.stringify(next) === JSON.stringify(mine)) return
+  const byid = new Map(next.items.map((i) => [i.id, i]))
+  for (const s of [...past, ...future])
+    for (const c of s.changes) {
+      const i = byid.get(c.after.id)
+      if (!i || i.updated <= c.after.updated) continue
+      Object.assign(c.after, i)
+      if (c.before) Object.assign(c.before, i)
+    }
+  app.boards[next.id] = next
+  put('boards', next.id, $state.snapshot(app.boards[next.id]))
 }
 
 /** add cards on top of the open board, or into a column, and select them */
@@ -553,7 +574,7 @@ export function setboards(list: board[]) {
 export async function load() {
   for (const b of await all<board>('boards')) app.boards[b.id] = b
   if (!app.boards.home) {
-    app.boards.home = { id: 'home', name: 'Home', items: [], updated: Date.now() }
-    save(app.boards.home)
+    app.boards.home = { id: 'home', name: 'Home', items: [], updated: 0 }
+    put('boards', 'home', $state.snapshot(app.boards.home))
   }
 }
