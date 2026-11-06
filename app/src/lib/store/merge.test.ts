@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
 import type { board, item } from '../model'
-import { merge } from './merge'
+import { covers, merge } from './merge'
 
 const day = 864e5
 const now = 100 * day
@@ -65,4 +65,12 @@ test('board fields follow the newer board, updated is the latest of both', () =>
   expect(m.cover).toBeUndefined()
   expect(m.updated).toBe(now - 5)
   expect(merge(b, a, now).name).toBe('New name')
+})
+
+test('covers: drive holds everything only when no item or board field is newer here', () => {
+  const theirs = sheet([card('x', now - 5)], now - 5)
+  expect(covers(theirs, sheet([card('x', now - 10)], now - 10))).toBe(true)
+  expect(covers(theirs, sheet([card('x', now - 1)], now - 5))).toBe(false)
+  expect(covers(theirs, sheet([card('x', now - 5), card('y', now - 20)], now - 5))).toBe(false)
+  expect(covers(theirs, sheet([card('x', now - 5)], now - 1))).toBe(false)
 })

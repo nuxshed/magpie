@@ -8,11 +8,56 @@ const up = 'https://www.googleapis.com/upload/drive/v3/files'
 const fields = 'id,version,modifiedTime,trashed,appProperties'
 
 let folders: Promise<Record<string, string>> | undefined
+let assets: Promise<Map<string, string>> | undefined
+let active = 0
+const queue: (() => void)[] = []
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+/** true when drive asks us to slow down or failed on its side */
+async function busy(res: Response) {
+  if (res.status === 429 || res.status >= 500) return true
+  if (res.status !== 403) return false
+  const reason = (await res.clone().json().catch(() => null))?.error?.errors?.[0]?.reason
+  return reason === 'rateLimitExceeded' || reason === 'userRateLimitExceeded'
+}
+
+/** call drive, backing off with jitter on rate limits and server errors, four retries */
+async function send(url: string, init?: RequestInit) {
+  for (let n = 0; ; n++) {
+    const res = await call(url, init)
+    if (n === 4 || !(await busy(res))) return res
+    await sleep(500 * 2 ** n * (1 + Math.random()))
+  }
+}
 
 async function req(url: string, init?: RequestInit) {
-  const res = await call(url, init)
+  const res = await send(url, init)
   if (!res.ok) throw new Error(`drive ${res.status}`)
   return res
+}
+
+/** run at most four at once, handing the slot straight to the next in line */
+async function limit<T>(fn: () => Promise<T>) {
+  if (active < 4) active++
+  else await new Promise<void>((r) => queue.push(r))
+  try {
+    return await fn()
+  } finally {
+    const next = queue.shift()
+    if (next) next()
+    else active--
+  }
+}
+
+/** asset hash to drive file id, listed once per session */
+function assetfiles() {
+  return (assets ??= find({ magpie: 'asset' })
+    .then((list) => new Map(list.map((f) => [f.appProperties?.id ?? '', f.id])))
+    .catch((e) => {
+      assets = undefined
+      throw e
+    }))
 }
 
 /** files matching appProperties, not trashed, following pages */
@@ -68,7 +113,7 @@ function folder(name: 'boards' | 'assets') {
 
 /** a file's version, null when it is gone or trashed */
 export async function info(id: string) {
-  const res = await call(`${api}/${id}?fields=${fields}`)
+  const res = await send(`${api}/${id}?fields=${fields}`)
   if (res.status === 404) return null
   if (!res.ok) throw new Error(`drive ${res.status}`)
   const f: file = await res.json()
@@ -102,13 +147,20 @@ export async function updateboard(id: string, b: board): Promise<file> {
 
 /** upload an asset once, the same hash is the same file */
 export async function putasset(id: string, blob: Blob) {
-  if ((await find({ magpie: 'asset', id })).length) return
+  const files = await assetfiles()
+  if (files.has(id)) return
   const ext = blob.type === 'image/gif' ? 'gif' : 'webp'
-  await create({ name: `${id}.${ext}`, parents: [await folder('assets')], appProperties: { magpie: 'asset', id } }, blob, blob.type || 'image/webp')
+  const f = await create({ name: `${id}.${ext}`, parents: [await folder('assets')], appProperties: { magpie: 'asset', id } }, blob, blob.type || 'image/webp')
+  files.set(id, f.id)
 }
 
-/** download an asset, undefined when drive has none */
-export async function getasset(id: string) {
-  const [f] = await find({ magpie: 'asset', id })
-  return f ? (await req(`${api}/${f.id}?alt=media`)).blob() : undefined
+/** download an asset, undefined when drive has none, four at a time */
+export function getasset(id: string) {
+  return limit(async () => {
+    const files = await assetfiles()
+    const f = files.get(id) ?? (await find({ magpie: 'asset', id }))[0]?.id
+    if (!f) return undefined
+    files.set(id, f)
+    return (await req(`${api}/${f}?alt=media`)).blob()
+  })
 }

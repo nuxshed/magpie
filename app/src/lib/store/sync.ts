@@ -2,6 +2,7 @@ import { absorb, app } from '../board.svelte'
 import type { board } from '../model'
 import { all, del, get, keys, put } from './db'
 import * as drive from './drive'
+import { covers } from './merge'
 
 export type status = 'saved' | 'saving' | 'offline' | 'error' | 'auth'
 
@@ -14,6 +15,8 @@ let chain = Promise.resolve(true)
 let slow: ReturnType<typeof setTimeout> | undefined
 let pulled: string | undefined
 let on = false
+let jobs = 0
+let poll: ReturnType<typeof setInterval> | undefined
 
 /** whether this device syncs: signed in and not on dev seed data */
 export const syncing = () => on
@@ -26,7 +29,9 @@ function show(s: status) {
 
 /** run drive work one job at a time, true when it went through */
 function job(fn: () => Promise<unknown>) {
+  jobs++
   return (chain = chain.then(async () => {
+    jobs--
     if (!navigator.onLine) {
       show('offline')
       return false
@@ -87,15 +92,15 @@ async function pull() {
     const id = f.appProperties?.id
     if (!id || metas[id]?.version === f.version) continue
     const theirs = await drive.download(f.id)
-    const clean = !app.boards[id] || metas[id]?.at === app.boards[id].updated
     absorb(theirs)
-    await setmeta({ id, file: f.id, version: f.version, at: clean ? app.boards[id].updated : metas[id]?.at })
+    const b = app.boards[id]
+    await setmeta({ id, file: f.id, version: f.version, at: covers(theirs, b) ? b.updated : undefined })
   }
   const last = files.map((f) => f.modifiedTime ?? '').sort().at(-1)
   if (last && last > (pulled ?? '')) await put('sync', '.pulled', (pulled = last))
 }
 
-/** pull, then push what changed here */
+/** pull, then push what changed here, anything the pull merged in that drive lacks included */
 export const syncall = () =>
   job(async () => {
     await pull()
@@ -128,9 +133,10 @@ export function stop() {
   for (const id in timers) clearTimeout(timers[id])
   removeEventListener('focus', syncall)
   removeEventListener('online', syncall)
+  clearInterval(poll)
 }
 
-/** start syncing: load what was synced before, queue every local asset on the first sync, sync now, and again on focus and when back online */
+/** start syncing: load what was synced before, queue every local asset on the first sync, sync now, and again on focus, every 45s while visible, and when back online */
 export async function start() {
   for (const m of await all<meta | string>('sync')) if (typeof m === 'object') metas[m.id] = m
   pulled = await get<string>('sync', '.pulled')
@@ -138,5 +144,6 @@ export async function start() {
   on = true
   addEventListener('focus', syncall)
   addEventListener('online', syncall)
+  poll = setInterval(() => document.visibilityState === 'visible' && !jobs && syncall(), 45e3)
   return syncall()
 }

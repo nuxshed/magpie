@@ -38,7 +38,7 @@ mock.module('../board.svelte', () => ({
 }))
 
 Object.assign(globalThis, { navigator: { onLine: true }, addEventListener: () => {} })
-const { changed, flush, start, syncall } = await import('./sync')
+const { changed, flush, start, stop, syncall } = await import('./sync')
 
 const note = (id: string, updated: number, text: string) => ({ id, kind: 'note' as const, x: 0, y: 0, w: 256, z: 1, updated, text })
 const local = (updated: number, items = [note('x', updated, 'mine')]) => (app.boards.b = { id: 'b', name: 'Board', items, updated })
@@ -78,11 +78,19 @@ test('drive moved on: download and merge before uploading', async () => {
 })
 
 test('pull merges a newer file in and leaves a clean board clean', async () => {
-  remote.body = { ...remote.body!, items: [note('x', 4000, 'from the other device')], updated: 4000 }
+  remote.body = { ...remote.body!, items: remote.body!.items.map((i) => (i.id === 'x' ? note('x', 4000, 'from the other device') : i)), updated: 4000 }
   remote.version++
   await syncall()
   expect(calls).toEqual(['list', 'download'])
   expect(app.boards.b.items.find((i) => i.id === 'x')?.text).toBe('from the other device')
+})
+
+test('pull that merges in cards drive lacks pushes them back', async () => {
+  remote.body = { ...remote.body!, items: remote.body!.items.filter((i) => i.id !== 'y'), updated: 4500 }
+  remote.version++
+  await syncall()
+  expect(calls).toEqual(['list', 'download', 'info', 'update'])
+  expect(remote.body!.items.map((i) => i.id).sort()).toEqual(['x', 'y'])
 })
 
 test('a failed upload keeps the board dirty and shows the error, retry sends it', async () => {
@@ -107,4 +115,5 @@ test('changes are debounced 2s per board', async () => {
   await new Promise((r) => setTimeout(r, 2100))
   await flush()
   expect(calls).toEqual(['info', 'update'])
+  stop()
 })
