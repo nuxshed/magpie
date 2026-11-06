@@ -439,6 +439,28 @@ export function nudge(ids: string[], dx: number, dy: number) {
   update(Object.fromEntries(ids.map((id) => [id, { x: getitem(id)!.x + dx, y: getitem(id)!.y + dy }])))
 }
 
+/** move canvas cards close below a card that grew or shrank, and the cards below those, so spacing stays */
+export function reflow(id: string, from: number, to: number) {
+  const i = getitem(id)
+  if (!i || i.parent) return
+  const reach = 320
+  const pushed = [{ ...rect(i), h: from }]
+  const patches: Record<string, Partial<item>> = {}
+  for (const k of items()
+    .filter((k) => !k.parent && k.id !== id)
+    .sort((a, b) => a.y - b.y)) {
+    const r = rect(k)
+    const below = pushed.some((p) => {
+      const d = r.y - (p.y + p.h)
+      return d >= 0 && d <= reach && r.x < p.x + p.w && r.x + r.w > p.x
+    })
+    if (!below) continue
+    pushed.push(r)
+    patches[k.id] = { y: k.y + to - from }
+  }
+  if (Object.keys(patches).length) system(patches)
+}
+
 /** new empty note at a point, already editing */
 export function addnote(at: point, t = droptarget(at)) {
   const [n] = add([{ kind: 'note', x: Math.round(at.x), y: Math.round(at.y), w: widths.note, text: '' }], t)

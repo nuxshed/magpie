@@ -4,7 +4,8 @@
 </script>
 
 <script lang="ts">
-  import { app, bounds, cardat, droptarget, into, items, linkimage, openboard, rect, sendto, startcrop, topz, update } from '../board.svelte'
+  import { untrack } from 'svelte'
+  import { app, bounds, cardat, droptarget, into, items, linkimage, openboard, rect, reflow, sendto, startcrop, topz, update } from '../board.svelte'
   import { align, edge } from '../canvas/guides'
   import { onscreen, toworld, view } from '../canvas/view.svelte'
   import { track } from '../input/track'
@@ -26,6 +27,15 @@
   const col = $derived(card.kind === 'column')
 
   $effect(() => () => delete app.heights[card.id])
+
+  let tall = 0
+  $effect(() => {
+    const h = app.heights[card.id] ?? 0
+    if (card.parent) tall = 0
+    if (card.parent || app.dragging || app.live[card.id]) return
+    if (tall && h !== tall) untrack(() => reflow(card.id, tall, h))
+    tall = h
+  })
 
   $effect(() => {
     const r = flights[card.id]
