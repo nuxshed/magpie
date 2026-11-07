@@ -440,11 +440,11 @@ export function nudge(ids: string[], dx: number, dy: number) {
   update(Object.fromEntries(ids.map((id) => [id, { x: getitem(id)!.x + dx, y: getitem(id)!.y + dy }])))
 }
 
-/** move canvas cards close below a card that grew or shrank, and the cards below those, so spacing stays */
+/** move canvas cards within about two notes below a note or column that grew or shrank, and the cards below those, so spacing stays */
 export function reflow(id: string, from: number, to: number) {
   const i = getitem(id)
-  if (!i || i.parent) return
-  const reach = 320
+  if (!i || i.parent || (i.kind !== 'note' && i.kind !== 'column')) return
+  const reach = 80
   const pushed = [{ ...rect(i), h: from }]
   const patches: Record<string, Partial<item>> = {}
   for (const k of items()
