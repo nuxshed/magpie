@@ -15,6 +15,7 @@ export const app = $state({
   current: '',
   sel: [] as string[],
   editing: null as string | null,
+  multi: false,
   dragging: false,
   live: {} as Record<string, Partial<item>>,
   heights: {} as Record<string, number>,

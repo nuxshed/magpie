@@ -34,10 +34,12 @@
     justify-content: center;
     background: var(--canvas);
     color: var(--ink);
+    padding: 0 24px;
+    text-align: center;
   }
   h1 {
     margin: 0;
-    font: 400 88px/1 var(--f-display);
+    font: 400 clamp(56px, 18vw, 88px) / 1 var(--f-display);
     letter-spacing: -0.01em;
   }
   p {

@@ -59,12 +59,16 @@ export function place(w: number, h: number, from = spot(), incol = true): { x: n
   return { ...free({ x: snap(from.x), y: snap(from.y) }, w, h), t: null }
 }
 
-/** zoom keeping a screen point still */
-export function zoomat(z: number, sx = innerWidth / 2, sy = innerHeight / 2) {
-  const w = toworld(sx, sy)
+/** zoom so a world point lands on a screen point */
+export function pinned(z: number, w: { x: number; y: number }, sx: number, sy: number) {
   view.zoom = clamp(z)
   view.x = sx - w.x * view.zoom
   view.y = sy - w.y * view.zoom
+}
+
+/** zoom keeping a screen point still */
+export function zoomat(z: number, sx = innerWidth / 2, sy = innerHeight / 2) {
+  pinned(z, toworld(sx, sy), sx, sy)
 }
 
 /** step zoom to the next 25% */

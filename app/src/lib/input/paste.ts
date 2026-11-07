@@ -42,6 +42,18 @@ export function adddata(data: DataTransfer | null, at: point) {
   else addtext(data.getData('text/uri-list').split('\n')[0] || data.getData('text/plain'), at, t)
 }
 
+/** pick image files from the device and add them at a point */
+export function pickimages(at: point) {
+  const input = Object.assign(document.createElement('input'), { type: 'file', accept: 'image/*', multiple: true })
+  input.onchange = () => addfiles([...input.files!], at, droptarget(at))
+  input.click()
+}
+
+/** add the clipboard text at a point, for devices with no paste shortcut */
+export async function pastetext(at: point) {
+  addtext(await navigator.clipboard.readText().catch(() => ''), at, droptarget(at))
+}
+
 /** pick an image file as a link card's preview image */
 export function pickthumb(id: string) {
   const input = Object.assign(document.createElement('input'), { type: 'file', accept: 'image/*' })

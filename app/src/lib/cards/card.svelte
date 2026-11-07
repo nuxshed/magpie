@@ -55,7 +55,9 @@
     if (e.button !== 0 || editing || app.cropping === card.id) return
     e.stopPropagation()
     const was = selected
-    if (!was) app.sel = e.shiftKey ? [...app.sel, card.id] : [card.id]
+    const add = e.shiftKey || app.multi
+    const slop = e.pointerType === 'touch' ? 8 : 4
+    if (!was) app.sel = add ? [...app.sel, card.id] : [card.id]
     const moving = items()
       .filter((i) => app.sel.includes(i.id) && !app.sel.includes(i.parent ?? ''))
       .sort((a, b) => a.z - b.z)
@@ -69,7 +71,7 @@
     track(
       e,
       (dx, dy, ev) => {
-        if (!moved && Math.hypot(dx, dy) < 4) return
+        if (!moved && Math.hypot(dx, dy) < slop) return
         moved = app.dragging = true
         const lock = ev.shiftKey ? (Math.abs(dx) > Math.abs(dy) ? 'y' : 'x') : ''
         let wx = lock === 'x' ? 0 : dx / view.zoom
@@ -91,8 +93,8 @@
       },
       () => {
         if (moved) drop(start)
-        else if (was && e.shiftKey) app.sel = app.sel.filter((id) => id !== card.id)
-        else if (was) app.sel = [card.id]
+        else if (was && add) app.sel = app.sel.filter((id) => id !== card.id)
+        else if (was && !app.menu) app.sel = [card.id]
       }
     )
   }

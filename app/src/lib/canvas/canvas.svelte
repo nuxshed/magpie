@@ -15,6 +15,7 @@
   import Zoom from '../chrome/zoom.svelte'
   import { onkey, typing } from '../input/keys'
   import { adddata } from '../input/paste'
+  import { touch } from '../input/touch'
   import { track } from '../input/track'
   import { all, get, put } from '../store/db'
   import { fetchpreviews } from '../store/preview'
@@ -27,6 +28,7 @@
   let marquee = $state<{ x: number; y: number; w: number; h: number } | null>(null)
   let space = $state(false)
   let panning = $state(false)
+  let touched = false
   const list = $derived.by(() => {
     const all = items()
     const cols = new Set(all.filter((i) => i.kind === 'column').map((i) => i.id))
@@ -126,6 +128,20 @@
     return () => node.removeEventListener('wheel', wheel)
   })
 
+  /** keep the note being edited above the soft keyboard */
+  function lift() {
+    const r = document.querySelector(`[data-id="${app.editing}"]`)?.getBoundingClientRect()
+    const v = visualViewport
+    if (r && v) view.y -= Math.max(0, Math.min(r.bottom - (v.offsetTop + v.height - 16), r.top - 64))
+  }
+
+  $effect(() => {
+    const v = visualViewport
+    if (!v || !app.editing) return
+    v.addEventListener('resize', lift)
+    return () => v.removeEventListener('resize', lift)
+  })
+
   /** pinch and cmd+scroll zoom around the cursor, plain scroll pans */
   function wheel(e: WheelEvent) {
     e.preventDefault()
@@ -140,13 +156,8 @@
     }
   }
 
-  /** space+drag or middle mouse pans, anywhere */
-  function grab(e: PointerEvent) {
-    if (app.menu && !(e.target as Element).closest('.menu')) app.menu = null
-    if (app.cropping && !(e.target as Element).closest(`.cropbar, [data-id="${app.cropping}"]`)) endcrop(true)
-    if (e.button !== 1 && !(space && e.button === 0)) return
-    e.preventDefault()
-    e.stopPropagation()
+  /** drag the view */
+  function pan(e: PointerEvent) {
     const sx = view.x
     const sy = view.y
     panning = true
@@ -160,11 +171,29 @@
     )
   }
 
-  /** press on empty canvas clears the selection, dragging draws a marquee */
+  /** space+drag or middle mouse pans anywhere, two fingers pinch */
+  function grab(e: PointerEvent) {
+    touched = e.pointerType === 'touch'
+    if (app.menu && !(e.target as Element).closest('.menu')) app.menu = null
+    if (app.cropping && !(e.target as Element).closest(`.cropbar, [data-id="${app.cropping}"]`)) endcrop(true)
+    if (touched) {
+      const a = document.activeElement
+      if (a instanceof HTMLElement && typing(a) && a !== e.target) a.blur()
+      if (touch(e)) return e.stopPropagation()
+    }
+    if (e.button !== 1 && !(space && e.button === 0)) return
+    e.preventDefault()
+    e.stopPropagation()
+    pan(e)
+  }
+
+  /** press on empty canvas clears the selection, then a finger pans and a mouse draws a marquee */
   function down(e: PointerEvent) {
     if (e.target !== el || e.button !== 0) return
-    const keep = e.shiftKey ? [...app.sel] : []
+    const add = e.shiftKey || app.multi
+    const keep = add ? [...app.sel] : []
     app.sel = keep
+    if (touched && !app.multi) return pan(e)
     track(
       e,
       (dx, dy) => {
@@ -248,6 +277,7 @@
   onpointermove={move}
   onpointerleave={() => (pointer.inside = false)}
   onmousedown={(e) => e.button === 1 && e.preventDefault()}
+  ondblclickcapture={(e) => e.isTrusted && touched && e.stopPropagation()}
   ondblclick={(e) => e.target === el && addnote(toworld(e.clientX, e.clientY))}
   oncontextmenu={context}
   ondragover={over}
@@ -271,8 +301,9 @@
   {#if blank}
     <div class="blank">
       <div class="big">Paste or drop anything here.</div>
-      <div>An image, a link or some text. It lands where your cursor is.</div>
-      <div>Or press <span class="k">N</span> for a note, <span class="k">B</span> for a board.</div>
+      <div>An image, a link or some text. <span class="fine">It lands where your cursor is.</span></div>
+      <div class="fine">Or press <span class="k">N</span> for a note, <span class="k">B</span> for a board.</div>
+      <div class="coarse">Or add a note, column or board below.</div>
     </div>
   {/if}
   {#if marquee}

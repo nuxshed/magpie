@@ -8,6 +8,7 @@
   const r = $derived(it ? (compact ? 1 : frameof({ ...it, crop: draft })) : 1)
   const colors = ['#ffffff', '#f2f1ee', '#1c1c1a', '#000000']
   let h = $state(0)
+  let w = $state(0)
 
   /** under the card, or above it when there is no room */
   const pos = $derived.by(() => {
@@ -15,7 +16,7 @@
     const b = document.querySelector(`[data-id="${it?.id}"]`)?.getBoundingClientRect()
     if (!b) return { x: 16, y: 16 }
     const y = b.bottom + 10 + h < innerHeight ? b.bottom + 10 : Math.max(16, b.top - 10 - h)
-    return { x: Math.max(16, b.left), y }
+    return { x: Math.min(Math.max(16, b.left), innerWidth - w - 16), y }
   })
 
   const natural = () => own(it?.id ?? '') ?? r
@@ -33,7 +34,7 @@
 
 {#if it}
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="pop cropbar" style:left="{pos.x}px" style:top="{pos.y}px" bind:offsetHeight={h} onpointerdown={(e) => e.stopPropagation()}>
+  <div class="pop cropbar" style:left="{pos.x}px" style:top="{pos.y}px" bind:offsetHeight={h} bind:offsetWidth={w} onpointerdown={(e) => e.stopPropagation()}>
     {#if !compact}
       {#if it.kind === 'link'}<button class="q" type="button" onclick={() => ratio(1.91)}>Wide</button>{/if}
       <button class="q" type="button" onclick={() => ratio(1)}>Square</button>

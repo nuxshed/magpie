@@ -6,15 +6,15 @@
   const all = $derived(b ? pictures(b.id) : [])
   const pinned = $derived(b?.cover ?? [])
   const shown = $derived(b ? cover(b.id) : [])
-  const w = 400
+  const w = () => Math.min(400, innerWidth - 32)
   let h = $state(0)
 
   /** beside the board card, on whichever side has room */
   const pos = $derived.by(() => {
     const id = items().find((i) => i.board === b?.id)?.id
     const r = document.querySelector(`[data-id="${id}"]`)?.getBoundingClientRect()
-    if (!r) return { x: (innerWidth - w) / 2, y: (innerHeight - h) / 2 }
-    const x = r.right + 12 + w < innerWidth ? r.right + 12 : Math.max(16, r.left - 12 - w)
+    if (!r) return { x: (innerWidth - w()) / 2, y: (innerHeight - h) / 2 }
+    const x = r.right + 12 + w() < innerWidth ? r.right + 12 : Math.max(16, r.left - 12 - w())
     return { x, y: Math.max(16, Math.min(r.top, innerHeight - h - 16)) }
   })
 
@@ -32,7 +32,6 @@
     aria-label="Choose cover"
     style:left="{pos.x}px"
     style:top="{pos.y}px"
-    style:width="{w}px"
     bind:offsetHeight={h}
   >
     <div class="rl">Cover for {b.name}</div>

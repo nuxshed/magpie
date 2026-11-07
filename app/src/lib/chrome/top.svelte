@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { app, current, href } from '../board.svelte'
+  import { app, current, href, redo, undo } from '../board.svelte'
   import { forget, signin } from '../auth'
   import type { board } from '../model'
   import { wipe } from '../store/db'
@@ -55,9 +55,9 @@
   </nav>
   <div class="tr">
     {#if failed}
-      <button class="q sync error" type="button" onclick={() => (panel = !panel)}><i class="dot"></i>{labels[app.sync]}</button>
+      <button class="q sync error" type="button" onclick={() => (panel = !panel)}><i class="dot"></i><span>{labels[app.sync]}</span></button>
     {:else}
-      <span class="sync {app.sync}"><i class="dot"></i>{labels[app.sync]}</span>
+      <span class="sync {app.sync}" title={labels[app.sync]}><i class="dot"></i><span>{labels[app.sync]}</span></span>
     {/if}
     <button class="q" class:on={more} type="button" aria-label="Menu" onclick={() => (more = !more)}>
       <svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="3" cy="7" r=".8" /><circle cx="7" cy="7" r=".8" /><circle cx="11" cy="7" r=".8" /></svg>
@@ -76,6 +76,9 @@
 {/if}
 {#if more}
   <div class="pop menu more" role="menu" tabindex="-1" use:away={() => (more = false)}>
+    <button class="mi" type="button" onclick={() => ((more = false), undo())}>Undo<span class="s">⌘Z</span></button>
+    <button class="mi" type="button" onclick={() => ((more = false), redo())}>Redo<span class="s">⌘⇧Z</span></button>
+    <div class="msep"></div>
     <button class="mi" type="button" onclick={signout}>Sign out</button>
   </div>
 {/if}

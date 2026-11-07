@@ -19,7 +19,7 @@
     update
   } from '../board.svelte'
   import { fit, toworld } from '../canvas/view.svelte'
-  import { pickthumb } from '../input/paste'
+  import { pickimages, pickthumb, pastetext } from '../input/paste'
   import { natural, openlink, picture, type item } from '../model'
 
   let h = $state(0)
@@ -99,6 +99,8 @@
       <button class="mi" type="button" onclick={() => run(() => addnote(here()))}>Add note<span class="s">N</span></button>
       <button class="mi" type="button" onclick={() => run(() => addcolumn(here()))}>Add column<span class="s">C</span></button>
       <button class="mi" type="button" onclick={() => run(() => addboard(here()))}>Add board<span class="s">B</span></button>
+      <button class="mi" type="button" onclick={() => run(() => pickimages(here()))}>Add image…</button>
+      <button class="mi" type="button" onclick={() => run(() => pastetext(here()))}>Paste<span class="s">⌘V</span></button>
       <div class="msep"></div>
       <button class="mi" type="button" onclick={() => run(() => (app.sel = items().filter((i) => !i.parent).map((i) => i.id)))}>
         Select all<span class="s">⌘A</span>
