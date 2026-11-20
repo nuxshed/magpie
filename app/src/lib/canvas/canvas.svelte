@@ -9,6 +9,7 @@
   import Add from '../chrome/add.svelte'
   import Coverpick from '../chrome/coverpick.svelte'
   import Croptool from '../chrome/croptool.svelte'
+  import Player from '../chrome/player.svelte'
   import Menu from '../chrome/menu.svelte'
   import Selbar from '../chrome/selbar.svelte'
   import Top from '../chrome/top.svelte'
@@ -323,6 +324,7 @@
   <Menu />
   <Coverpick />
   <Croptool />
+  <Player />
   <Top />
   <Add />
   <Zoom />

@@ -60,10 +60,11 @@ export const widths = { image: 260, link: 256, note: 256, column: 272, board: 22
 /** the asset a card shows as its picture, if any */
 export const picture = (i: item) => (i.kind === 'image' ? i.asset : i.kind === 'link' ? i.thumb : undefined)
 
-/** a picture's frame aspect: its crop's, else its own for images, square for spotify links and wide for other links */
+/** a picture's frame aspect: its crop's, else its own for images and instagram links, square for spotify links and wide for other links */
 export function frameof(i: item) {
   if (i.crop?.r) return i.crop.r
   if (i.kind !== 'link') return i.aspect ?? 1
+  if (/^https?:\/\/([a-z]+\.)?instagram\.com\//i.test(i.url ?? '')) return i.aspect ?? 0.8
   return /^https?:\/\/([a-z]+\.)?spotify\.(com|link)\//i.test(i.url ?? '') ? 1 : 1.91
 }
 
@@ -71,6 +72,12 @@ export function frameof(i: item) {
 export function natural(id: string) {
   const i = document.querySelector<HTMLImageElement>(`[data-id="${id}"] .clip img`)
   return i?.naturalWidth ? i.naturalWidth / i.naturalHeight : undefined
+}
+
+/** instagram's embed player for a post or reel link */
+export function igembed(url = '') {
+  const code = url.match(/^https?:\/\/(?:www\.)?instagram\.com\/(?:[\w.]+\/)?(?:p|reels?|tv)\/([\w-]+)/i)?.[1]
+  return code && `https://www.instagram.com/p/${code}/embed/captioned/`
 }
 
 /** open a link in a new tab, http and https only */

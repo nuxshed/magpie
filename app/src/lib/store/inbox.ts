@@ -24,7 +24,7 @@ export async function pullinbox() {
       if (put.ok) localStorage.setItem('inboxboards', names)
     }
     const res = await fetch(url, { headers: { authorization } })
-    const list: { id: string; text: string; board?: string | null }[] = res.ok ? await res.json() : []
+    const list: Parameters<typeof receive>[0] = res.ok ? await res.json() : []
     if (list.length) {
       fetchpreviews(receive(list))
       await fetch(url, {

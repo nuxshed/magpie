@@ -26,6 +26,7 @@ export const app = $state({
   guides: [] as { x: number; y: number; w: number; h: number }[],
   menu: null as { x: number; y: number; pick?: boolean } | null,
   covering: null as string | null,
+  playing: null as string | null,
   cropping: null as string | null,
   sync: 'saved' as status,
   ready: false
@@ -307,13 +308,13 @@ export function paths() {
   return out
 }
 
-/** put texts sent from the phone on top of an inbox column on the board picked by path, else home, links as link cards, with no undo step, and return the new urls */
-export function receive(list: { id: string; text: string; board?: string | null }[]) {
+/** put texts sent from the phone, with any title and caption the phone read, on top of an inbox column on the board picked by path, else home, links as link cards, with no undo step, and return the new urls */
+export function receive(list: { id: string; text: string; board?: string | null; title?: string | null; caption?: string | null }[]) {
   const ids = paths()
   const now = Date.now()
   const touched = new Set<board>()
   const urls: string[] = []
-  for (const { id, text, board } of list) {
+  for (const { id, text, board, title, caption } of list) {
     const b = app.boards[ids[board ?? ''] ?? 'home']
     if (b.items.some((i) => i.id === id)) continue
     let z = b.items.reduce((m, i) => Math.max(m, i.z), 0)
@@ -328,7 +329,9 @@ export function receive(list: { id: string; text: string; board?: string | null 
     }
     const order = Math.min(0, ...b.items.filter((i) => i.parent === cid && !i.deleted).map((i) => i.order ?? 0)) - 1
     const url = text.match(/https?:\/\/\S+/)?.[0]
-    const card = url ? { kind: 'link' as const, w: widths.link, url } : { kind: 'note' as const, w: widths.note, text }
+    const card = url
+      ? { kind: 'link' as const, w: widths.link, url, title: title ?? undefined, desc: caption ?? undefined }
+      : { kind: 'note' as const, w: widths.note, text }
     write(b, { ...card, id, x: 0, y: 0, z: ++z, parent: cid, order, updated: now })
     touched.add(b)
     if (url) urls.push(url)

@@ -45,7 +45,7 @@ function pump() {
 async function thumb(src: string, ref: string) {
   try {
     const r = await ask('/image', { url: src, ref })
-    return r.ok ? (await saveimage(await r.blob(), 1200)).asset : undefined
+    return r.ok ? await saveimage(await r.blob(), 1200) : undefined
   } catch {
     return undefined
   }
@@ -57,11 +57,12 @@ async function fill(url: string) {
   try {
     const d = await (await ask('/preview', { url })).json()
     Object.assign(p, { title: text(d.title), desc: text(d.desc), site: text(d.site) })
-    if (text(d.image)) p.thumb = await thumb(d.image, url)
+    const t = text(d.image) && (await thumb(d.image, url))
+    if (t) Object.assign(p, { thumb: t.asset, aspect: t.aspect })
   } catch {
     if (!navigator.onLine) return
   }
   const list = pending(url).filter((i) => !i.fetched || p.title || p.thumb)
-  const keep = (i: item) => ({ title: i.title ?? p.title, desc: i.desc ?? p.desc, site: i.site ?? p.site, thumb: i.thumb ?? p.thumb })
+  const keep = (i: item) => ({ title: i.title ?? p.title, desc: i.desc ?? p.desc, site: i.site ?? p.site, thumb: i.thumb ?? p.thumb, aspect: i.thumb ? i.aspect : p.aspect })
   system(Object.fromEntries(list.map((i) => [i.id, { ...keep(i), fetched: Date.now() }])))
 }

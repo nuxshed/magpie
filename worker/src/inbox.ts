@@ -1,10 +1,12 @@
+import { decode } from './decode'
+
 export interface Box {
   ALLOWED_ORIGIN: string
   INBOX_KEY: string
   DB: D1Database
 }
 
-/** text shared from the phone comes in by post, the app reads it by get and clears what it took by delete, and keeps the board list at /inbox/boards for the phone to pick from */
+/** text shared from the phone comes in by post, with the page title and description when the phone could read them, the app reads it by get and clears what it took by delete, and keeps the board list at /inbox/boards for the phone to pick from */
 export async function inbox(req: Request, env: Box, path: string) {
   const head = {
     'access-control-allow-origin': env.ALLOWED_ORIGIN,
@@ -26,17 +28,21 @@ export async function inbox(req: Request, env: Box, path: string) {
 
   if (req.method === 'POST') {
     const json = req.headers.get('content-type')?.includes('json')
-    const body = json ? await req.json<{ text?: unknown; board?: unknown }>() : { text: await req.text() }
+    const body: Record<string, unknown> = json ? await req.json() : { text: await req.text() }
+    const str = (v: unknown, n: number) => (typeof v === 'string' && v.trim() ? decode(v).replace(/\s+/g, ' ').trim().slice(0, n) : null)
     const text = String(body.text ?? '').trim()
     if (!text) return reply('empty', 400)
-    const board = typeof body.board === 'string' && body.board.trim() ? body.board.trim() : null
-    await env.DB.prepare('insert into inbox (id, text, board, at) values (?, ?, ?, ?)')
-      .bind(crypto.randomUUID(), text.slice(0, 10000), board, Date.now())
+    let title = str(body.title, 300)
+    let caption = str(body.desc, 2000)
+    const ig = title?.match(/^(.*?) on Instagram: ["“](.*?)["”]?$/)
+    if (ig) [title, caption] = [ig[1], ig[2]]
+    await env.DB.prepare('insert into inbox (id, text, board, title, caption, at) values (?, ?, ?, ?, ?, ?)')
+      .bind(crypto.randomUUID(), text.slice(0, 10000), str(body.board, 500), title, caption, Date.now())
       .run()
     return reply('saved')
   }
   if (req.method === 'GET') {
-    const { results } = await env.DB.prepare('select id, text, board from inbox order by at limit 100').all()
+    const { results } = await env.DB.prepare('select id, text, board, title, caption from inbox order by at limit 100').all()
     return reply(JSON.stringify(results))
   }
   if (req.method === 'DELETE') {

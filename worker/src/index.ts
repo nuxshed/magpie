@@ -1,4 +1,5 @@
 import { auth, type Keys } from './auth'
+import { decode } from './decode'
 import { inbox, type Box } from './inbox'
 
 type Env = Keys & Box
@@ -13,24 +14,6 @@ const short = 600
 
 const maxhead = 1024 * 1024
 const types = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']
-const named: Record<string, string> = {
-  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', hellip: '…', ndash: '–', mdash: '—',
-  rsquo: '’', lsquo: '‘', rdquo: '”', ldquo: '“', middot: '·', copy: '©', reg: '®', trade: '™'
-}
-
-/** decode html entities */
-function decode(s: string) {
-  return s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e: string) => {
-    if (e[0] !== '#') return named[e.toLowerCase()] ?? m
-    const n = e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10)
-    try {
-      return String.fromCodePoint(n)
-    } catch {
-      return m
-    }
-  })
-}
-
 const clean = (s?: string) => (s ? decode(s).replace(/\s+/g, ' ').trim() || undefined : undefined)
 
 const local = /^(localhost|.*\.localhost|.*\.local|.*\.internal|0\.|10\.|127\.|169\.254\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|\[)/i
@@ -182,12 +165,31 @@ async function fromembed(href: string, base: string) {
   } catch {}
 }
 
+/** shortcode of an instagram post or reel */
+function igcode(u: URL) {
+  if (/(^|\.)instagram\.com$/.test(u.hostname)) return u.pathname.match(/^\/(?:[\w.]+\/)?(?:p|reels?|tv)\/([\w-]+)/)?.[1]
+}
+
+/** full size uncropped picture of an instagram post, or a reel's cover, from its legacy media redirect */
+async function igimage(code: string) {
+  try {
+    const res = await fetch(`https://www.instagram.com/p/${code}/media/?size=l`, {
+      headers: { 'user-agent': agent },
+      redirect: 'manual',
+      signal: AbortSignal.timeout(3000)
+    })
+    const to = weburl(res.headers.get('location'))
+    return to && /\.(cdninstagram\.com|fbcdn\.net)$/.test(to.hostname) ? to.href : undefined
+  } catch {}
+}
+
 /** fetch a page and build its preview, never throwing */
 async function preview(url: URL): Promise<{ data: info; ok: boolean }> {
   const data: info = { url: url.href, site: url.hostname.replace(/^www\./, '') }
   let end = url
   let ok = false
   let embed: string | undefined
+  const ig = igcode(url)
   try {
     const res = await fetch(url.href, {
       headers: { 'user-agent': agent, accept: 'text/html,application/xhtml+xml', 'accept-language': 'en' },
@@ -212,6 +214,12 @@ async function preview(url: URL): Promise<{ data: info; ok: boolean }> {
     if (data.site === host) data.site = o.site ?? host
     data.desc = (await spotify(end)) ?? data.desc
     ok = true
+  }
+  if (ig) {
+    data.site = 'Instagram'
+    if (data.title === 'Instagram') data.title = undefined
+    data.image = (await igimage(ig)) ?? data.image
+    ok = !!(data.title || data.image)
   }
   const name = place(end) ?? place(url)
   if (name) Object.assign(data, { title: name, desc: undefined, site: 'Google Maps' })
@@ -274,7 +282,7 @@ export default {
     if (pathname === '/image') return image(url!, weburl(searchParams.get('ref')), cors)
 
     if (pathname === '/preview') {
-      const key = new Request(`https://preview.cache/3?url=${encodeURIComponent(url!.href)}`)
+      const key = new Request(`https://preview.cache/4?url=${encodeURIComponent(url!.href)}`)
       const hit = await caches.default.match(key)
       if (hit) return new Response(hit.body, { headers: { ...cors, 'content-type': 'application/json' } })
       const { data, ok } = await preview(url!)

@@ -9,7 +9,7 @@
   import { align, edge } from '../canvas/guides'
   import { onscreen, toworld, view } from '../canvas/view.svelte'
   import { track } from '../input/track'
-  import { frameof, minw, openlink, type item } from '../model'
+  import { frameof, igembed, minw, openlink, type item } from '../model'
   import Boardcard from './boardcard.svelte'
   import Columncard from './columncard.svelte'
   import Imagecard from './imagecard.svelte'
@@ -181,6 +181,7 @@
   function open() {
     if (editing) return
     if (card.kind === 'note') app.editing = card.id
+    else if (card.kind === 'link' && igembed(card.url)) app.playing = card.url!
     else if (card.kind === 'link') openlink(card.url)
     else if (card.kind === 'board') openboard(card)
     else if (card.kind === 'image') startcrop(card.id)

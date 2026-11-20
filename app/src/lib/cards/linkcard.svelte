@@ -1,7 +1,7 @@
 <script lang="ts">
   import { tick, untrack } from 'svelte'
   import { app, update } from '../board.svelte'
-  import { frameof, type item } from '../model'
+  import { frameof, igembed, type item } from '../model'
   import Framed from './framed.svelte'
   import Picture from './picture.svelte'
 
@@ -75,6 +75,7 @@
         edit={cropping ? (crop) => (app.live[card.id] = { crop }) : undefined}
         resizable={!compact}
       />
+      {#if igembed(card.url) && !compact && !cropping}<div class="play" aria-hidden="true"></div>{/if}
     </div>
   {:else}
     <div class="fallback">{name}</div>
@@ -86,3 +87,26 @@
   </div>
 {/if}
 {#if card.note && !compact}<div class="unote">{card.note}</div>{/if}
+
+<style>
+  .play {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 44px;
+    height: 44px;
+    margin: -22px 0 0 -22px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.45);
+    pointer-events: none;
+  }
+  .play::after {
+    content: '';
+    position: absolute;
+    left: 17px;
+    top: 13px;
+    border-style: solid;
+    border-width: 9px 0 9px 14px;
+    border-color: transparent transparent transparent #fff;
+  }
+</style>
