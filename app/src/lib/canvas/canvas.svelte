@@ -19,6 +19,7 @@
   import { track } from '../input/track'
   import { all, get, put } from '../store/db'
   import { fetchpreviews } from '../store/preview'
+  import { pullinbox } from '../store/inbox'
   import { start } from '../store/sync'
   import { signed } from '../auth'
   import { pointer, spot, toworld, view, zoomat } from './view.svelte'
@@ -49,6 +50,9 @@
     if (signed() && !localStorage.getItem('seeded')) start()
     fetchpreviews()
     addEventListener('online', () => fetchpreviews())
+    pullinbox()
+    addEventListener('focus', pullinbox)
+    setInterval(() => document.visibilityState === 'visible' && pullinbox(), 30e3)
   })
 
   /** save a board's viewport along with how often and when it was last opened */

@@ -9,3 +9,13 @@ GOOGLE_CLIENT_ID = "908100805284-d7r6992edc2sb510vkbldlommnc8602a.apps.googleuse
 [env.dev.vars]
 ALLOWED_ORIGIN = "http://localhost:5173"
 GOOGLE_CLIENT_ID = "908100805284-d7r6992edc2sb510vkbldlommnc8602a.apps.googleusercontent.com"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "magpie-inbox"
+database_id = "REPLACE_WITH_ID"
+
+[[env.dev.d1_databases]]
+binding = "DB"
+database_name = "magpie-inbox"
+database_id = "REPLACE_WITH_ID"

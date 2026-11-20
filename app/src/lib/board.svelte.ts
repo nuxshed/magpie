@@ -295,6 +295,48 @@ export function absorb(theirs: board) {
   put('boards', next.id, $state.snapshot(app.boards[next.id]))
 }
 
+/** live boards by path from home, like "Travel / Japan", with home as "Home" */
+export function paths() {
+  const out: Record<string, string> = { Home: 'home' }
+  for (const b of Object.values(app.boards)) {
+    if (b.id === 'home' || !alive(b.id)) continue
+    const names: string[] = []
+    for (let p = b; p && p.id !== 'home'; p = app.boards[p.parent ?? '']) names.unshift(p.name)
+    out[names.join(' / ')] ??= b.id
+  }
+  return out
+}
+
+/** put texts sent from the phone on top of an inbox column on the board picked by path, else home, links as link cards, with no undo step, and return the new urls */
+export function receive(list: { id: string; text: string; board?: string | null }[]) {
+  const ids = paths()
+  const now = Date.now()
+  const touched = new Set<board>()
+  const urls: string[] = []
+  for (const { id, text, board } of list) {
+    const b = app.boards[ids[board ?? ''] ?? 'home']
+    if (b.items.some((i) => i.id === id)) continue
+    let z = b.items.reduce((m, i) => Math.max(m, i.z), 0)
+    const cid = `inbox-${b.id}`
+    const col = b.items.find((i) => i.id === cid)
+    if (!col || col.deleted) {
+      const there = b.items.filter((i) => !i.deleted && !i.parent)
+      const x = there.length ? Math.min(...there.map((i) => i.x)) - widths.column - 40 : 64
+      const y = there.length ? Math.min(...there.map((i) => i.y)) : 96
+      const base = col ?? { kind: 'column' as const, id: cid, x, y, w: widths.column, name: 'Inbox' }
+      write(b, { ...base, z: ++z, deleted: false, updated: now })
+    }
+    const order = Math.min(0, ...b.items.filter((i) => i.parent === cid && !i.deleted).map((i) => i.order ?? 0)) - 1
+    const url = text.match(/https?:\/\/\S+/)?.[0]
+    const card = url ? { kind: 'link' as const, w: widths.link, url } : { kind: 'note' as const, w: widths.note, text }
+    write(b, { ...card, id, x: 0, y: 0, z: ++z, parent: cid, order, updated: now })
+    touched.add(b)
+    if (url) urls.push(url)
+  }
+  for (const b of touched) save(b)
+  return urls
+}
+
 /** add cards on top of the open board, or into a column, and select them */
 export function add(list: draft[], t?: target | null, meta: meta[] = []) {
   let z = topz()

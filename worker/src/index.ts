@@ -1,6 +1,7 @@
 import { auth, type Keys } from './auth'
+import { inbox, type Box } from './inbox'
 
-type Env = Keys
+type Env = Keys & Box
 
 type info = { url: string; title?: string; desc?: string; site?: string; image?: string }
 
@@ -262,6 +263,7 @@ export default {
     }
     const { pathname, searchParams } = new URL(req.url)
     if (pathname.startsWith('/auth/')) return auth(req, env, pathname)
+    if (pathname === '/inbox' || pathname === '/inbox/boards') return inbox(req, env, pathname)
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors })
     if (req.method !== 'GET') return new Response('not found', { status: 404, headers: cors })
 
