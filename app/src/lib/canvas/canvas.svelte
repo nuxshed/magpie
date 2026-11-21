@@ -3,7 +3,7 @@
   import { goto } from '$app/navigation'
   import { page } from '$app/state'
   import { onMount, tick, untrack } from 'svelte'
-  import { addnote, alive, app, current, droptarget, endcrop, items, load, rect } from '../board.svelte'
+  import { addnote, alive, app, current, droptarget, endcrop, items, load, rect, unbox } from '../board.svelte'
   import type { item } from '../model'
   import Card from '../cards/card.svelte'
   import Add from '../chrome/add.svelte'
@@ -264,7 +264,9 @@
   function drop(e: DragEvent) {
     e.preventDefault()
     app.target = null
-    adddata(e.dataTransfer, toworld(e.clientX, e.clientY))
+    const id = e.dataTransfer?.getData('text/x-magpie-inbox')
+    if (id) unbox(id, toworld(e.clientX, e.clientY))
+    else adddata(e.dataTransfer, toworld(e.clientX, e.clientY))
   }
 </script>
 

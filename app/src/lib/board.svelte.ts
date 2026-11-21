@@ -308,36 +308,59 @@ export function paths() {
   return out
 }
 
-/** put texts sent from the phone, with any title and caption the phone read, on top of an inbox column on the board picked by path, else home, links as link cards, with no undo step, and return the new urls */
+/** put texts sent from the phone, with any title and caption the phone read, in the inbox, marked for the board picked by path, links as link cards, with no undo step, and return the new urls */
 export function receive(list: { id: string; text: string; board?: string | null; title?: string | null; caption?: string | null }[]) {
   const ids = paths()
   const now = Date.now()
-  const touched = new Set<board>()
+  const box = (app.boards.inbox ??= { id: 'inbox', name: 'Inbox', items: [], updated: 0 })
   const urls: string[] = []
   for (const { id, text, board, title, caption } of list) {
-    const b = app.boards[ids[board ?? ''] ?? 'home']
-    if (b.items.some((i) => i.id === id)) continue
-    let z = b.items.reduce((m, i) => Math.max(m, i.z), 0)
-    const cid = `inbox-${b.id}`
-    const col = b.items.find((i) => i.id === cid)
-    if (!col || col.deleted) {
-      const there = b.items.filter((i) => !i.deleted && !i.parent)
-      const x = there.length ? Math.min(...there.map((i) => i.x)) - widths.column - 40 : 64
-      const y = there.length ? Math.min(...there.map((i) => i.y)) : 96
-      const base = col ?? { kind: 'column' as const, id: cid, x, y, w: widths.column, name: 'Inbox' }
-      write(b, { ...base, z: ++z, deleted: false, updated: now })
-    }
-    const order = Math.min(0, ...b.items.filter((i) => i.parent === cid && !i.deleted).map((i) => i.order ?? 0)) - 1
+    if (box.items.some((i) => i.id === id)) continue
     const url = text.match(/https?:\/\/\S+/)?.[0]
     const card = url
       ? { kind: 'link' as const, w: widths.link, url, title: title ?? undefined, desc: caption ?? undefined }
       : { kind: 'note' as const, w: widths.note, text }
-    write(b, { ...card, id, x: 0, y: 0, z: ++z, parent: cid, order, updated: now })
-    touched.add(b)
+    write(box, { ...card, id, x: 0, y: 0, z: 0, order: now, dest: ids[board ?? ''], updated: now })
     if (url) urls.push(url)
   }
-  for (const b of touched) save(b)
+  if (list.length) save(box)
   return urls
+}
+
+/** cards waiting in the inbox, newest first */
+export function waiting() {
+  return (app.boards.inbox?.items.filter((i) => !i.deleted) ?? []).sort((a, b) => (b.order ?? 0) - (a.order ?? 0))
+}
+
+/** move a card out of the inbox onto the open board at a point, into a column there, or onto its own board to the right of what is there */
+export function unbox(id: string, at?: point, t = at && droptarget(at)) {
+  const it = waiting().find((i) => i.id === id)
+  const dest = at ? app.current : it?.dest
+  const b = app.boards[dest ?? '']
+  if (!it || !b || !alive(b.id)) return
+  const before = $state.snapshot(it)
+  const now = Date.now()
+  const there = b.items.filter((i) => !i.deleted && !i.parent)
+  const x = at ? at.x : there.length ? Math.max(...there.map((i) => i.x + i.w)) + 40 : 64
+  const y = at ? at.y : there.length ? Math.min(...there.map((i) => i.y)) : 96
+  const card: item = { ...before, x: Math.round(x), y: Math.round(y), z: b.items.reduce((m, i) => Math.max(m, i.z), 0) + 1, order: undefined, dest: undefined, deleted: false, updated: now }
+  const p = t ? into(t, [id]) : {}
+  Object.assign(card, p[id])
+  delete p[id]
+  commit([
+    { board: 'inbox', before, after: { ...before, deleted: true, updated: now } },
+    { board: b.id, before: null, after: card },
+    ...patch(p)
+  ])
+  if (at) app.sel = [id]
+}
+
+/** drop a card from the inbox */
+export function discard(id: string) {
+  const it = waiting().find((i) => i.id === id)
+  if (!it) return
+  const before = $state.snapshot(it)
+  commit([{ board: 'inbox', before, after: { ...before, deleted: true, updated: Date.now() } }])
 }
 
 /** add cards on top of the open board, or into a column, and select them */

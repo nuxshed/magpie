@@ -33,6 +33,7 @@ export type item = {
   collapsed?: boolean
 
   board?: string
+  dest?: string
 }
 
 /** how a picture sits in its frame: frame aspect, zoom over a full fill, offset as a share of the frame, padding color */

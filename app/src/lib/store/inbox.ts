@@ -5,7 +5,7 @@ import { fetchpreviews } from './preview'
 
 let busy = false
 
-/** keep a key opened as #inbox=key, then move what the phone sent into the inbox column */
+/** keep a key opened as #inbox=key, then move what the phone sent into the inbox */
 export async function pullinbox() {
   const m = location.hash.match(/^#inbox=(.+)$/)
   if (m) {
@@ -18,7 +18,7 @@ export async function pullinbox() {
   const url = `${PUBLIC_PREVIEW_URL}/inbox`
   const authorization = `Bearer ${key}`
   try {
-    const names = ['Home', ...Object.keys(paths()).filter((p) => p !== 'Home').sort()].join('\n')
+    const names = ['Inbox', 'Home', ...Object.keys(paths()).filter((p) => p !== 'Home').sort()].join('\n')
     if (names !== localStorage.getItem('inboxboards')) {
       const put = await fetch(`${url}/boards`, { method: 'PUT', headers: { authorization }, body: names })
       if (put.ok) localStorage.setItem('inboxboards', names)
