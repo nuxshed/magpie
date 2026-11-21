@@ -3,12 +3,13 @@
   import { goto } from '$app/navigation'
   import { page } from '$app/state'
   import { onMount, tick, untrack } from 'svelte'
-  import { addnote, alive, app, current, droptarget, endcrop, items, load, rect, unbox } from '../board.svelte'
+  import { addnote, alive, app, current, droptarget, endcrop, items, load, rect, tail, unbox } from '../board.svelte'
   import type { item } from '../model'
   import Card from '../cards/card.svelte'
   import Add from '../chrome/add.svelte'
   import Coverpick from '../chrome/coverpick.svelte'
   import Croptool from '../chrome/croptool.svelte'
+  import Flat from './flat.svelte'
   import Player from '../chrome/player.svelte'
   import Menu from '../chrome/menu.svelte'
   import Selbar from '../chrome/selbar.svelte'
@@ -47,6 +48,8 @@
     }
     for (const v of await all<{ id?: string; n?: number; seen?: number }>('views'))
       if (v.id) app.visits[v.id] = { n: v.n ?? 0, seen: v.seen ?? 0 }
+    const f = localStorage.getItem('flat')
+    app.flat = f ? f === '1' : matchMedia('(pointer: coarse) and (max-width: 700px)').matches
     app.ready = true
     if (signed() && !localStorage.getItem('seeded')) start()
     fetchpreviews()
@@ -98,7 +101,7 @@
     const from = app.current
     const still = matchMedia('(prefers-reduced-motion: reduce)').matches
     const card = items().find((i) => i.kind === 'board' && i.board === id)
-    const out = card && !still ? zoom(card, true) : null
+    const out = card && !still && !app.flat ? zoom(card, true) : null
     if (from) keep(from)
     const done = out && Promise.race([out.finished, new Promise((ok) => setTimeout(ok, 400))])
     const [v] = await Promise.all([get<{ x: number; y: number; zoom: number }>('views', id), done])
@@ -114,7 +117,7 @@
     await tick()
     out?.cancel()
     const back = items().find((i) => i.kind === 'board' && i.board === from)
-    if (still) return
+    if (still || app.flat) return
     if (back) zoom(back, false).finished.then((a) => a.cancel())
     else world!.animate([{ opacity: 0 }, { opacity: 1 }], { duration: parseFloat(getComputedStyle(world!).getPropertyValue('--d-base')) })
   }
@@ -149,6 +152,7 @@
 
   /** pinch and cmd+scroll zoom around the cursor, plain scroll pans */
   function wheel(e: WheelEvent) {
+    if (app.flat) return
     e.preventDefault()
     app.menu = null
     const k = e.deltaMode === 1 ? 16 : 1
@@ -181,6 +185,7 @@
     touched = e.pointerType === 'touch'
     if (app.menu && !(e.target as Element).closest('.menu')) app.menu = null
     if (app.cropping && !(e.target as Element).closest(`.cropbar, [data-id="${app.cropping}"]`)) endcrop(true)
+    if (app.flat) return
     if (touched) {
       const a = document.activeElement
       if (a instanceof HTMLElement && typing(a) && a !== e.target) a.blur()
@@ -243,7 +248,7 @@
   function paste(e: ClipboardEvent) {
     if (typing(e.target)) return
     e.preventDefault()
-    adddata(e.clipboardData, spot())
+    adddata(e.clipboardData, app.flat ? tail() : spot())
   }
 
   /** right click on empty canvas opens the canvas menu */
@@ -257,6 +262,7 @@
 
   function over(e: DragEvent) {
     e.preventDefault()
+    if (app.flat) return
     const t = droptarget(toworld(e.clientX, e.clientY))
     if (t?.col !== app.target?.col || t?.slot !== app.target?.slot) app.target = t
   }
@@ -265,8 +271,9 @@
     e.preventDefault()
     app.target = null
     const id = e.dataTransfer?.getData('text/x-magpie-inbox')
-    if (id) unbox(id, toworld(e.clientX, e.clientY))
-    else adddata(e.dataTransfer, toworld(e.clientX, e.clientY))
+    const at = app.flat ? tail() : toworld(e.clientX, e.clientY)
+    if (id) unbox(id, at)
+    else adddata(e.dataTransfer, at)
   }
 </script>
 
@@ -291,6 +298,9 @@
   ondragleave={(e) => !el?.contains(e.relatedTarget as Node) && (app.target = null)}
   ondrop={drop}
 >
+  {#if app.flat}
+    <Flat />
+  {:else}
   <div class="world" bind:this={world} style:transform="translate({view.x}px, {view.y}px) scale({view.zoom})">
     {#each list as item (item.id)}
       <Card card={item} />
@@ -323,9 +333,10 @@
     ></div>
   {/if}
   <Selbar />
+  <Croptool />
+  {/if}
   <Menu />
   <Coverpick />
-  <Croptool />
   <Player />
   <Top />
   <Add />

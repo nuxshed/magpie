@@ -16,7 +16,7 @@
   import Linkcard from './linkcard.svelte'
   import Notecard from './notecard.svelte'
 
-  let { card, colw, shift = 0 }: { card: item; colw?: number; shift?: number } = $props()
+  let { card, colw, shift = 0, flat = false }: { card: item; colw?: number; shift?: number; flat?: boolean } = $props()
 
   let node = $state<HTMLDivElement>()
   const c = $derived({ ...card, ...app.live[card.id], ...(colw && { w: colw }) })
@@ -26,13 +26,15 @@
   const solo = $derived(selected && app.sel.length === 1 && !app.dragging)
   const col = $derived(card.kind === 'column')
 
-  $effect(() => () => delete app.heights[card.id])
+  $effect(() => () => {
+    if (!flat && !app.flat) delete app.heights[card.id]
+  })
 
   let tall = 0
   $effect(() => {
     const h = app.heights[card.id] ?? 0
     if (card.parent) tall = 0
-    if (card.parent || app.dragging || app.live[card.id]) return
+    if (card.parent || flat || app.dragging || app.live[card.id]) return
     if (tall && h !== tall) untrack(() => reflow(card.id, tall, h))
     tall = h
   })
@@ -56,6 +58,11 @@
     e.stopPropagation()
     const was = selected
     const add = e.shiftKey || app.multi
+    if (flat) {
+      tapped = e.pointerType === 'touch'
+      app.sel = add ? (was ? app.sel.filter((id) => id !== card.id) : [...app.sel, card.id]) : [card.id]
+      return
+    }
     const slop = e.pointerType === 'touch' ? 8 : 4
     if (!was) app.sel = add ? [...app.sel, card.id] : [card.id]
     const moving = items()
@@ -178,8 +185,10 @@
     app.menu = { x: e.clientX, y: e.clientY }
   }
 
+  let tapped = false
+
   function open() {
-    if (editing) return
+    if (editing || (flat && card.kind === 'image')) return
     if (card.kind === 'note') app.editing = card.id
     else if (card.kind === 'link' && igembed(card.url)) app.playing = card.url!
     else if (card.kind === 'link') openlink(card.url)
@@ -188,7 +197,7 @@
   }
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
+<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
 <div
   class={col ? 'col' : `card ${card.kind === 'image' ? 'img' : card.kind}`}
   class:is-selected={selected && !editing && !dragging}
@@ -205,9 +214,10 @@
   style:z-index={colw ? null : dragging ? 1e6 : c.z}
   style:transform={shift ? `translateY(${shift}px)` : null}
   bind:this={node}
-  bind:offsetHeight={app.heights[card.id]}
+  bind:offsetHeight={() => app.heights[card.id], (h) => !flat && (app.heights[card.id] = h)}
   onpointerdown={down}
   ondblclick={open}
+  onclick={() => flat && tapped && open()}
   oncontextmenu={menu}
   ondragstart={(e) => e.preventDefault()}
 >

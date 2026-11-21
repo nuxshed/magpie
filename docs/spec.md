@@ -29,6 +29,7 @@ type item = {
   parent?: string       // column id, when inside a column
   order?: number        // position inside the column
   updated: number       // ms timestamp, used for merging
+  added?: number        // ms timestamp when made, for newest first; older cards fall back to updated
   deleted?: boolean     // tombstone, kept for sync
 
   // image
@@ -127,6 +128,15 @@ Send links and text from the phone through an iOS Shortcut in the share sheet.
 - The inbox button sits in the bottom right, before the zoom controls, with the count of cards for the open board. It opens a tray, newest first, with two tabs: This board (the default, reset on every board change) and All, grouped as unsorted, then each board by path. Unsorted cards, and cards whose board was deleted, belong to Home.
 - The tray can go full screen, also toggled with I: masonry tiles with full pictures, one column on narrow screens, with the same tabs.
 - Clicking a card places it in the middle of the view, clear of other cards when there is room; from full screen it also closes the inbox. Dragging it from the tray onto the canvas places it there, or into the column under it. Send places a card for another board on that board, to the right of what is there. × removes it. Each is one undo step, and a placed card leaves the inbox.
+- Move on an inbox card marks it for another board, or unsorted. Move to inbox in a card's menu, and Inbox at the top of Move to board, put cards back in the inbox, marked for the open board; a column gives up its cards and stays, board cards stay.
+
+## Flat view
+
+- A second view of the open board with no free arrangement, toggled from the top bar or with V, remembered per device. Phones start in it.
+- Board order: top level cards form lanes, cards whose sides overlap by more than half the narrower one, read left to right, each top to bottom. A column shows as a section, its name then its cards. Newest first sorts all cards but columns by `added`.
+- Laid out in CSS columns about 300px wide, so the order runs down each column; one column on phones.
+- Cards are the canvas cards without position: press selects, double click (a tap on touch) opens, notes edit in place, images don't crop, nothing drags or resizes. The menu, delete and move work as on the canvas.
+- Anything added (keys, buttons, paste, drop, the inbox) goes on the canvas below the last card in board order, and the view scrolls to it.
 
 ## Undo
 

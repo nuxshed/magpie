@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { alive, app, discard, paths, unbox, waiting } from '../board.svelte'
+  import { alive, app, discard, paths, redirect, tail, unbox, waiting } from '../board.svelte'
   import { center, onscreen, place, toworld } from '../canvas/view.svelte'
   import type { item } from '../model'
   import Picture from '../cards/picture.svelte'
@@ -30,6 +30,10 @@
 
   /** put a card near the middle of the view, left of the tray when it is open, clear of other cards when there is room in view */
   function put(i: item) {
+    if (app.flat) {
+      full = open = false
+      return unbox(i.id, tail(), null)
+    }
     const c = open && !full && innerWidth > 720 ? toworld((innerWidth - 356) / 2, innerHeight / 2) : center()
     if (full) full = open = false
     const at = { x: c.x - i.w / 2, y: c.y - 100 }
@@ -63,10 +67,23 @@
 />
 
 {#snippet actions(i: item)}
+  <div class="acts">
   {#if away(i)}
     <button class="q" type="button" title="Send to {names[dest(i)]}" onclick={(e) => (e.stopPropagation(), unbox(i.id))}>Send</button>
   {/if}
+  <select
+    class="q mv"
+    title="Move to another board's inbox"
+    onclick={(e) => e.stopPropagation()}
+    onkeydown={(e) => e.stopPropagation()}
+    onchange={(e) => redirect(i.id, e.currentTarget.value || undefined)}
+  >
+    <option value="_" selected disabled hidden>Move</option>
+    <option value="">Unsorted</option>
+    {#each Object.entries(names) as [id, p] (id)}<option value={id}>{p}</option>{/each}
+  </select>
   <button class="q x" type="button" aria-label="Remove" onclick={(e) => (e.stopPropagation(), discard(i.id))}>×</button>
+  </div>
 {/snippet}
 
 {#snippet text(i: item)}
@@ -121,7 +138,7 @@
 {/snippet}
 
 <div class="inbox">
-  <button class="q" class:on={open} type="button" aria-label="Inbox" onclick={toggle}>
+  <button class="q btn" class:on={open} type="button" aria-label="Inbox" onclick={toggle}>
     <svg viewBox="0 0 14 14"><path d="M1.5 8.5h3l1 1.5h3l1-1.5h3M1.5 8.5l1.5-6h8l1.5 6v3h-11z" /></svg>
     {#if mine.length}<span class="n">{mine.length}</span>{/if}
   </button>
@@ -167,6 +184,10 @@
   }
   .n {
     font-variant-numeric: tabular-nums;
+  }
+  .btn svg {
+    width: 13px;
+    height: 13px;
   }
   .head {
     display: flex;
@@ -237,15 +258,17 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .row .q,
-  .tile .q {
+  .acts {
     flex: none;
+    display: flex;
+    align-items: center;
+    gap: 2px;
     opacity: 0;
   }
-  .row:hover .q,
-  .row:focus-within .q,
-  .tile:hover .q,
-  .tile:focus-within .q {
+  .row:hover .acts,
+  .row:focus-within .acts,
+  .tile:hover .acts,
+  .tile:focus-within .acts {
     opacity: 1;
   }
   .full {
@@ -300,18 +323,46 @@
     line-clamp: 3;
     -webkit-box-orient: vertical;
   }
+  .mv {
+    appearance: none;
+    max-width: 64px;
+  }
   .none {
     padding: 20px 10px;
     color: var(--ink-3);
     font-size: 13px;
   }
   @media (pointer: coarse) {
-    .row .q,
-    .tile .q {
+    .acts {
       opacity: 1;
     }
   }
-  @media (max-width: 600px) {
+  @media (max-width: 640px) {
+    .tray {
+      position: fixed;
+      left: 8px;
+      right: 8px;
+      bottom: 56px;
+      width: auto;
+      max-height: 70dvh;
+    }
+    .row,
+    .cap {
+      flex-wrap: wrap;
+    }
+    .row .acts {
+      flex-basis: 100%;
+      padding-left: 44px;
+    }
+    .cap .acts {
+      flex-basis: 100%;
+    }
+    .full .head {
+      padding: 8px 12px;
+    }
+    .full .body {
+      padding: 0 12px 24px;
+    }
     .grid {
       columns: 1;
     }

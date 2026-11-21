@@ -13,7 +13,9 @@ import {
   redo,
   remove,
   setalign,
+  setflat,
   startcrop,
+  tail,
   togglelayout,
   undo,
   up
@@ -53,7 +55,7 @@ const tall = { note: 80, column: 160, board: 220 }
 
 /** a free spot for a new card, at the cursor or else the view center */
 export function room(kind: 'note' | 'column' | 'board', from?: { x: number; y: number }) {
-  const p = place(widths[kind], tall[kind], from, kind !== 'column')
+  const p = app.flat ? { ...tail(), t: null } : place(widths[kind], tall[kind], from, kind !== 'column')
   return [p, p.t] as const
 }
 
@@ -98,11 +100,12 @@ export function onkey(e: KeyboardEvent) {
     app.menu = { x: at.x, y: at.y, pick: true }
   } else if (e.key === '[') up()
   else if (e.key === ']') deeper()
+  else if (k === 'v' && !mod) setflat(!app.flat)
   else if (k === 'n') addnote(...room('note'))
   else if (k === 'c') addcolumn(room('column')[0])
   else if (k === 'b') addboard(...room('board'))
   else if (k === 'enter') enter()
-  else if (arrows[k] && app.sel.length) {
+  else if (arrows[k] && app.sel.length && !app.flat) {
     const d = e.shiftKey ? 10 : 1
     nudge(app.sel, arrows[k][0] * d, arrows[k][1] * d)
   } else return

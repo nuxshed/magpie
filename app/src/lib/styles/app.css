@@ -146,10 +146,6 @@ input.col-t{font-family:inherit;line-height:inherit}
   .blank .big{font-size:28px}
 }
 
-@media (max-width:520px){
-  .br{bottom:56px}
-}
-
 @media (pointer:coarse){
   .bl .multi{display:inline-flex}
   .blank .fine{display:none}

@@ -28,6 +28,7 @@ export const app = $state({
   covering: null as string | null,
   playing: null as string | null,
   cropping: null as string | null,
+  flat: false,
   sync: 'saved' as status,
   ready: false
 })
@@ -320,7 +321,7 @@ export function receive(list: { id: string; text: string; board?: string | null;
     const card = url
       ? { kind: 'link' as const, w: widths.link, url, title: title ?? undefined, desc: caption ?? undefined }
       : { kind: 'note' as const, w: widths.note, text }
-    write(box, { ...card, id, x: 0, y: 0, z: 0, order: now, dest: ids[board ?? ''], updated: now })
+    write(box, { ...card, id, x: 0, y: 0, z: 0, order: now, dest: ids[board ?? ''], updated: now, added: now })
     if (url) urls.push(url)
   }
   if (list.length) save(box)
@@ -363,11 +364,68 @@ export function discard(id: string) {
   commit([{ board: 'inbox', before, after: { ...before, deleted: true, updated: Date.now() } }])
 }
 
+/** move cards off the open board into the inbox, marked for this board, columns giving up their cards */
+export function tobox(ids: string[]) {
+  const box = (app.boards.inbox ??= { id: 'inbox', name: 'Inbox', items: [], updated: 0 })
+  const list = items().filter((i) => (ids.includes(i.id) || ids.includes(i.parent ?? '')) && i.kind !== 'column' && i.kind !== 'board')
+  if (!list.length) return
+  const now = Date.now()
+  const changes: change[] = []
+  for (const i of list) {
+    const before = $state.snapshot(i)
+    const old = box.items.find((x) => x.id === i.id)
+    changes.push({ before, after: { ...before, deleted: true, updated: now } })
+    changes.push({ board: 'inbox', before: old ? $state.snapshot(old) : null, after: { ...before, parent: undefined, order: now, dest: app.current, updated: now } })
+  }
+  commit(changes)
+  app.sel = []
+}
+
+/** mark an inbox card for another board, or none for unsorted */
+export function redirect(id: string, dest?: string) {
+  const it = waiting().find((i) => i.id === id)
+  if (!it) return
+  const before = $state.snapshot(it)
+  commit([{ board: 'inbox', before, after: { ...before, dest, updated: Date.now() } }])
+}
+
+/** top level cards in reading order: lanes of cards that overlap sideways, left to right, each top to bottom */
+export function flatorder() {
+  const lanes: { x0: number; x1: number; list: item[] }[] = []
+  for (const i of items()
+    .filter((i) => !i.parent)
+    .sort((a, b) => a.x - b.x)) {
+    const l = lanes.at(-1)
+    const overlap = l ? Math.min(l.x1, i.x + i.w) - Math.max(l.x0, i.x) : 0
+    if (l && overlap > Math.min(i.w, l.x1 - l.x0) / 2) {
+      l.list.push(i)
+      l.x1 = Math.max(l.x1, i.x + i.w)
+    } else lanes.push({ x0: i.x, x1: i.x + i.w, list: [i] })
+  }
+  return lanes.flatMap((l) => l.list.sort((a, b) => a.y - b.y))
+}
+
+/** switch between the canvas and the flat view, remembered on this device */
+export function setflat(on: boolean) {
+  app.flat = on
+  app.sel = []
+  app.editing = null
+  app.menu = null
+  localStorage.setItem('flat', on ? '1' : '0')
+}
+
+/** the spot after the last card in reading order, below the last lane */
+export function tail() {
+  const last = flatorder().at(-1)
+  if (!last) return { x: 64, y: 96 }
+  return { x: last.x, y: Math.round(last.y + (app.heights[last.id] ?? 200) + 24) }
+}
+
 /** add cards on top of the open board, or into a column, and select them */
 export function add(list: draft[], t?: target | null, meta: meta[] = []) {
   let z = topz()
   const now = Date.now()
-  const made = list.map((d) => ({ ...d, id: newid(), z: ++z, updated: now }) as item)
+  const made = list.map((d) => ({ ...d, id: newid(), z: ++z, updated: now, added: now }) as item)
   const p = t ? into(t, made.map((i) => i.id)) : {}
   for (const i of made) Object.assign(i, p[i.id])
   commit([...made.map((after) => ({ before: null, after })), ...patch(p)], meta)
@@ -486,7 +544,7 @@ export function duplicate(ids: string[]) {
   let z = topz()
   const now = Date.now()
   const made = list.map((i) => {
-    const c: item = { ...$state.snapshot(i), id: map[i.id], z: ++z, updated: now }
+    const c: item = { ...$state.snapshot(i), id: map[i.id], z: ++z, updated: now, added: now }
     if (c.parent && map[c.parent]) c.parent = map[c.parent]
     else if (c.parent) c.order = (c.order ?? 0) + 0.5
     else Object.assign(c, { x: c.x + 16, y: c.y + 16 })

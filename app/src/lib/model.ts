@@ -10,6 +10,7 @@ export type item = {
   parent?: string
   order?: number
   updated: number
+  added?: number
   deleted?: boolean
 
   asset?: string
