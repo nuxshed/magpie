@@ -3,6 +3,7 @@
   import { center, onscreen, place, toworld } from '../canvas/view.svelte'
   import type { item } from '../model'
   import Picture from '../cards/picture.svelte'
+  import { typing } from '../input/keys'
 
   let open = $state(false)
   let full = $state(false)
@@ -46,6 +47,10 @@
   }
 
   function key(e: KeyboardEvent) {
+    if (e.key.toLowerCase() === 'i' && !e.metaKey && !e.ctrlKey && !e.altKey && !typing(e.target)) {
+      open = full = !full
+      return
+    }
     if (e.key !== 'Escape') return
     if (full) full = false
     else open = false

@@ -125,7 +125,7 @@ Send links and text from the phone through an iOS Shortcut in the share sheet.
 - The app keeps the key in localStorage, set once per device by opening `/#inbox=<key>`.
 - It pulls on open, on focus and every 30s while visible. Entries go into a hidden board with the id `inbox`, which syncs like any board but is never shown as a canvas. Each card keeps `dest`, the board its path names; `Inbox` or an unknown path leaves it unsorted. The first URL in the text becomes a link card, anything else a note. The card takes the entry id, so two devices pulling at once merge into one card. Arrivals get no undo step; `order` holds the arrival time.
 - The inbox button sits in the bottom right, before the zoom controls, with the count of cards for the open board. It opens a tray, newest first, with two tabs: This board (the default, reset on every board change) and All, grouped as unsorted, then each board by path. Unsorted cards, and cards whose board was deleted, belong to Home.
-- The tray can go full screen: masonry tiles with full pictures, one column on narrow screens, with the same tabs.
+- The tray can go full screen, also toggled with I: masonry tiles with full pictures, one column on narrow screens, with the same tabs.
 - Clicking a card places it in the middle of the view, clear of other cards when there is room; from full screen it also closes the inbox. Dragging it from the tray onto the canvas places it there, or into the column under it. Send places a card for another board on that board, to the right of what is there. × removes it. Each is one undo step, and a placed card leaves the inbox.
 
 ## Undo
