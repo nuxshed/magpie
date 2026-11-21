@@ -1,7 +1,7 @@
 <script lang="ts">
   import { alive, app, discard, paths, redirect, tail, unbox, waiting } from '../board.svelte'
   import { center, onscreen, place, toworld } from '../canvas/view.svelte'
-  import type { item } from '../model'
+  import { coarse, igembed, openlink, type item } from '../model'
   import Picture from '../cards/picture.svelte'
   import { typing } from '../input/keys'
 
@@ -28,14 +28,10 @@
     all = false
   })
 
-  /** put a card near the middle of the view, left of the tray when it is open, clear of other cards when there is room in view */
+  /** put a card on the board: below the last card in the flat view, else near the middle of the view, left of the tray when it is open, clear of other cards when there is room in view */
   function put(i: item) {
-    if (app.flat) {
-      full = open = false
-      return unbox(i.id, tail(), null)
-    }
+    if (app.flat) return unbox(i.id, tail(), null)
     const c = open && !full && innerWidth > 720 ? toworld((innerWidth - 356) / 2, innerHeight / 2) : center()
-    if (full) full = open = false
     const at = { x: c.x - i.w / 2, y: c.y - 100 }
     const p = place(i.w, 200, at, false)
     unbox(i.id, onscreen({ ...p, w: i.w, h: 200 }) ? p : at, null)
@@ -45,9 +41,23 @@
   const away = (i: item) => !!dest(i) && dest(i) !== app.current
   const host = (u = '') => u.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]
 
+  /** open a card's link, playing instagram in the overlay on desktop */
+  function view(i: item) {
+    if (i.kind !== 'link') return
+    if (igembed(i.url) && !coarse()) app.playing = i.url!
+    else openlink(i.url)
+  }
+
+  /** touch screens open the inbox full screen, others as a tray */
   function toggle() {
-    open = !open
+    if (coarse()) open = full = !full
+    else open = !open
     all = false
+  }
+
+  function close() {
+    full = false
+    if (coarse()) open = false
   }
 
   function key(e: KeyboardEvent) {
@@ -56,7 +66,7 @@
       return
     }
     if (e.key !== 'Escape') return
-    if (full) full = false
+    if (full) close()
     else open = false
   }
 </script>
@@ -68,6 +78,7 @@
 
 {#snippet actions(i: item)}
   <div class="acts">
+  <button class="q" type="button" title="Add to this board" onclick={(e) => (e.stopPropagation(), put(i))}>Add</button>
   {#if away(i)}
     <button class="q" type="button" title="Send to {names[dest(i)]}" onclick={(e) => (e.stopPropagation(), unbox(i.id))}>Send</button>
   {/if}
@@ -97,9 +108,9 @@
     role="button"
     tabindex="0"
     draggable="true"
-    title="Click to place, or drag onto the board"
-    onclick={() => put(i)}
-    onkeydown={(e) => e.key === 'Enter' && put(i)}
+    title="Drag onto the board, or Add"
+    onclick={() => view(i)}
+    onkeydown={(e) => e.key === 'Enter' && view(i)}
     ondragstart={(e) => {
       e.dataTransfer?.setData('text/x-magpie-inbox', i.id)
       dragging = true
@@ -115,7 +126,7 @@
 {/snippet}
 
 {#snippet tile(i: item)}
-  <div class="tile" role="button" tabindex="0" title="Click to place on the board" onclick={() => put(i)} onkeydown={(e) => e.key === 'Enter' && put(i)}>
+  <div class="tile" class:link={i.kind === 'link'} role="button" tabindex="0" onclick={() => view(i)} onkeydown={(e) => e.key === 'Enter' && view(i)}>
     {#if i.thumb}<Picture asset={i.thumb} />{/if}
     <div class="cap">
       <div class="tx">{@render text(i)}</div>
@@ -163,7 +174,7 @@
     <div class="full" role="dialog" aria-label="Inbox">
       <div class="head">
         {@render tabs()}
-        <button class="q" type="button" onclick={() => (full = false)}>Close</button>
+        <button class="q" type="button" onclick={close}>Close</button>
       </div>
       <div class="body">
         {#each groups as g (g.id)}
@@ -301,6 +312,8 @@
     border-radius: 6px;
     box-shadow: var(--sh-0);
     overflow: hidden;
+  }
+  .tile.link {
     cursor: pointer;
   }
   .tile:hover {

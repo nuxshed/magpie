@@ -6,7 +6,7 @@
   const close = () => (app.playing = null)
 </script>
 
-<svelte:window onkeydown={(e) => src && e.key === 'Escape' && close()} />
+<svelte:window onkeydown={(e) => src && e.key === 'Escape' && (e.stopImmediatePropagation(), close())} />
 
 {#if src}
   <div class="shade scrim" role="presentation" onpointerdown={close}></div>

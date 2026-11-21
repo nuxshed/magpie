@@ -82,6 +82,9 @@ export function igembed(url = '') {
   return code && `https://www.instagram.com/p/${code}/embed/captioned/`
 }
 
+/** true on touch screens */
+export const coarse = () => matchMedia('(pointer: coarse)').matches
+
 /** open a link in a new tab, http and https only */
 export function openlink(url = '') {
   if (/^https?:\/\//i.test(url)) window.open(url, '_blank', 'noopener')

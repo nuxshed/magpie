@@ -18,6 +18,11 @@
   )
 
   $effect(() => {
+    app.current
+    if (el) el.scrollTop = 0
+  })
+
+  $effect(() => {
     const id = app.last
     if (id) tick().then(() => el?.querySelector(`[data-id="${id}"]`)?.scrollIntoView({ block: 'nearest' }))
   })
@@ -61,7 +66,7 @@
   }
   .cols :global(.card) {
     position: relative;
-    margin-bottom: var(--s-4);
+    margin-bottom: var(--s-6);
     break-inside: avoid;
     transition: none;
   }
@@ -93,6 +98,12 @@
   @media (max-width: 600px) {
     .flat {
       padding: 64px 16px 72px;
+    }
+    .cols :global(.card) {
+      margin-bottom: var(--s-7);
+    }
+    .sh {
+      padding-top: var(--s-5);
     }
   }
 </style>

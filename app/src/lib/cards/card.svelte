@@ -9,7 +9,7 @@
   import { align, edge } from '../canvas/guides'
   import { onscreen, toworld, view } from '../canvas/view.svelte'
   import { track } from '../input/track'
-  import { frameof, igembed, minw, openlink, type item } from '../model'
+  import { coarse, frameof, igembed, minw, openlink, type item } from '../model'
   import Boardcard from './boardcard.svelte'
   import Columncard from './columncard.svelte'
   import Imagecard from './imagecard.svelte'
@@ -59,8 +59,10 @@
     const was = selected
     const add = e.shiftKey || app.multi
     if (flat) {
-      tapped = e.pointerType === 'touch'
-      app.sel = add ? (was ? app.sel.filter((id) => id !== card.id) : [...app.sel, card.id]) : [card.id]
+      tapped = e.pointerType === 'touch' && !add
+      held = false
+      if (tapped) press(e)
+      else app.sel = add ? (was ? app.sel.filter((id) => id !== card.id) : [...app.sel, card.id]) : [card.id]
       return
     }
     const slop = e.pointerType === 'touch' ? 8 : 4
@@ -186,11 +188,40 @@
   }
 
   let tapped = false
+  let held = false
+
+  /** a finger held still on a card selects it and opens its menu, a scroll or lift first cancels */
+  function press(e: PointerEvent) {
+    const { clientX: x, clientY: y } = e
+    const timer = setTimeout(() => {
+      held = true
+      app.sel = [card.id]
+      app.menu = { x: x + 8, y: y + 8 }
+      navigator.vibrate?.(8)
+    }, 450)
+    const move = (ev: PointerEvent) => Math.hypot(ev.clientX - x, ev.clientY - y) > 8 && end()
+    const end = () => {
+      clearTimeout(timer)
+      removeEventListener('pointermove', move)
+      removeEventListener('pointerup', end)
+      removeEventListener('pointercancel', end)
+    }
+    addEventListener('pointermove', move)
+    addEventListener('pointerup', end)
+    addEventListener('pointercancel', end)
+  }
+
+  /** a tap opens the card, but a tapped link inside a note opens by itself */
+  function tap(e: MouseEvent) {
+    if (!flat || !tapped || held || (e.target as Element).closest('a')) return
+    app.sel = []
+    open()
+  }
 
   function open() {
     if (editing || (flat && card.kind === 'image')) return
     if (card.kind === 'note') app.editing = card.id
-    else if (card.kind === 'link' && igembed(card.url)) app.playing = card.url!
+    else if (card.kind === 'link' && igembed(card.url) && !coarse()) app.playing = card.url!
     else if (card.kind === 'link') openlink(card.url)
     else if (card.kind === 'board') openboard(card)
     else if (card.kind === 'image') startcrop(card.id)
@@ -217,7 +248,7 @@
   bind:offsetHeight={() => app.heights[card.id], (h) => !flat && (app.heights[card.id] = h)}
   onpointerdown={down}
   ondblclick={open}
-  onclick={() => flat && tapped && open()}
+  onclick={tap}
   oncontextmenu={menu}
   ondragstart={(e) => e.preventDefault()}
 >
