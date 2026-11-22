@@ -152,7 +152,7 @@
 
   /** pinch and cmd+scroll zoom around the cursor, plain scroll pans */
   function wheel(e: WheelEvent) {
-    if (app.flat) return
+    if (app.flat || (e.target as Element).closest('.inbox')) return
     e.preventDefault()
     app.menu = null
     const k = e.deltaMode === 1 ? 16 : 1
