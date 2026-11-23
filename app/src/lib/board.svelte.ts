@@ -1,5 +1,5 @@
 import { goto } from '$app/navigation'
-import { newid, picture, widths, type board, type draft, type item } from './model'
+import { coarse, igembed, newid, openlink, picture, widths, type board, type draft, type item } from './model'
 import { all, put } from './store/db'
 import { merge } from './store/merge'
 import { changed, type status } from './store/sync'
@@ -29,9 +29,21 @@ export const app = $state({
   playing: null as string | null,
   cropping: null as string | null,
   flat: false,
+  pile: false,
+  toast: null as { text: string; n: number; back: boolean } | null,
   sync: 'saved' as status,
   ready: false
 })
+
+let told = 0
+
+/** show a short message, with an undo button for the last change unless back is false */
+export function say(text: string, back = true) {
+  app.toast = { text, n: ++told, back }
+}
+
+/** a count with its noun, like 1 card or 3 cards */
+const many = (n: number, one: string) => (n === 1 ? `1 ${one}` : `${n} ${one}s`)
 
 const past: step[] = []
 const future: step[] = []
@@ -162,6 +174,7 @@ export function sendto(list: item[], dest: string) {
     .map((i) => ({ id: i.board!, before: { parent: app.current }, after: { parent: dest } }))
   commit(changes, meta)
   app.sel = []
+  say(`Moved to ${b.name}`)
 }
 
 /** parent and order patches that put cards into a column at a slot */
@@ -194,6 +207,7 @@ function setmeta(m: meta, back: boolean) {
 function commit(changes: change[], meta: meta[] = []) {
   const b = current()
   if (!b || (!changes.length && !meta.length)) return
+  app.toast = null
   past.push({ board: b.id, changes, meta })
   if (past.length > cap) past.shift()
   future.length = 0
@@ -231,6 +245,7 @@ function replay(s: step, back: boolean) {
 
 export function undo() {
   const s = past.pop()
+  app.toast = null
   if (!s) return
   future.push(s)
   replay(s, true)
@@ -238,6 +253,7 @@ export function undo() {
 
 export function redo() {
   const s = future.pop()
+  app.toast = null
   if (!s) return
   past.push(s)
   replay(s, false)
@@ -309,7 +325,19 @@ export function paths() {
   return out
 }
 
-/** put texts sent from the phone, with any title and caption the phone read, in the inbox, marked for the board picked by path, links as link cards, with no undo step, and return the new urls */
+/** a url without tracking bits, to spot the same link sent twice */
+function plain(u = '') {
+  try {
+    const x = new URL(u)
+    if (x.hostname.endsWith('instagram.com')) x.search = ''
+    for (const k of [...x.searchParams.keys()]) if (/^(utm_|si$|igsh|fbclid)/.test(k)) x.searchParams.delete(k)
+    return x.hostname.replace(/^www\./, '') + x.pathname.replace(/\/$/, '') + x.search
+  } catch {
+    return u
+  }
+}
+
+/** put texts sent from the phone, with any title and caption the phone read, in the pile, marked for the board picked by path, links as link cards, with no undo step, and return the new urls; a link already in the pile moves to the top, one already on its board is skipped */
 export function receive(list: { id: string; text: string; board?: string | null; title?: string | null; caption?: string | null }[]) {
   const ids = paths()
   const now = Date.now()
@@ -318,26 +346,62 @@ export function receive(list: { id: string; text: string; board?: string | null;
   for (const { id, text, board, title, caption } of list) {
     if (box.items.some((i) => i.id === id)) continue
     const url = text.match(/https?:\/\/\S+/)?.[0]
+    const dest = ids[board ?? '']
+    if (url) {
+      const key = plain(url)
+      const old = waiting().find((i) => plain(i.url) === key)
+      if (old) {
+        write(box, { ...$state.snapshot(old), order: now, dest: dest ?? old.dest, updated: now })
+        continue
+      }
+      if (app.boards[dest ?? '']?.items.some((i) => !i.deleted && plain(i.url) === key)) continue
+    }
     const card = url
       ? { kind: 'link' as const, w: widths.link, url, title: title ?? undefined, desc: caption ?? undefined }
       : { kind: 'note' as const, w: widths.note, text }
-    write(box, { ...card, id, x: 0, y: 0, z: 0, order: now, dest: ids[board ?? ''], updated: now, added: now })
+    write(box, { ...card, id, x: 0, y: 0, z: 0, order: now, dest, updated: now, added: now })
     if (url) urls.push(url)
   }
   if (list.length) save(box)
   return urls
 }
 
-/** cards waiting in the inbox, newest first */
+/** cards in the pile, newest first */
 export function waiting() {
   return (app.boards.inbox?.items.filter((i) => !i.deleted) ?? []).sort((a, b) => (b.order ?? 0) - (a.order ?? 0))
+}
+
+/** the board a pile card belongs to, home when unsorted or its board is gone */
+export const owner = (i: item) => (i.dest && alive(i.dest) ? i.dest : 'home')
+
+/** a board's pile, newest first */
+export function piled(id: string) {
+  return waiting().filter((i) => owner(i) === id)
+}
+
+/** true when a board is the top one or sits somewhere below it */
+export function within(id: string, top: string) {
+  for (let b = app.boards[id]; b; b = app.boards[b.parent ?? '']) if (b.id === top) return true
+  return false
+}
+
+/** the pile of a board and of every board below it, newest first */
+export function under(id: string) {
+  return waiting().filter((i) => within(owner(i), id))
+}
+
+/** add cards to the open board's pile, as one undo step */
+export function stash(list: draft[]) {
+  const now = Date.now()
+  const dest = app.current === 'home' ? undefined : app.current
+  commit(list.map((d, n) => ({ board: 'inbox', before: null, after: { ...d, x: 0, y: 0, id: newid(), z: 0, order: now + n, dest, updated: now, added: now } as item })))
+  say(`${list.length === 1 ? 'Saved' : many(list.length, 'card') + ' saved'} to the pile`)
 }
 
 /** move a card out of the inbox onto the open board at a point, into a column there, or onto its own board to the right of what is there */
 export function unbox(id: string, at?: point, t = at && droptarget(at)) {
   const it = waiting().find((i) => i.id === id)
-  const dest = at ? app.current : it?.dest
-  const b = app.boards[dest ?? '']
+  const b = it && app.boards[at ? app.current : owner(it)]
   if (!it || !b || !alive(b.id)) return
   const before = $state.snapshot(it)
   const now = Date.now()
@@ -354,6 +418,7 @@ export function unbox(id: string, at?: point, t = at && droptarget(at)) {
     ...patch(p)
   ])
   if (at) app.sel = [id]
+  say(at ? 'Added to the canvas' : `Placed on ${b.name}`)
 }
 
 /** drop a card from the inbox */
@@ -362,6 +427,7 @@ export function discard(id: string) {
   if (!it) return
   const before = $state.snapshot(it)
   commit([{ board: 'inbox', before, after: { ...before, deleted: true, updated: Date.now() } }])
+  say('Removed from the pile')
 }
 
 /** move cards off the open board into the inbox, marked for this board, columns giving up their cards */
@@ -379,6 +445,7 @@ export function tobox(ids: string[]) {
   }
   commit(changes)
   app.sel = []
+  say(`${list.length === 1 ? 'Moved' : many(list.length, 'card') + ' moved'} to the pile`)
 }
 
 /** mark an inbox card for another board, or none for unsorted */
@@ -387,6 +454,7 @@ export function redirect(id: string, dest?: string) {
   if (!it) return
   const before = $state.snapshot(it)
   commit([{ board: 'inbox', before, after: { ...before, dest, updated: Date.now() } }])
+  say(`Moved to ${dest ? app.boards[dest]?.name : 'Unsorted'}`)
 }
 
 /** top level cards in reading order: lanes of cards that overlap sideways, left to right, each top to bottom */
@@ -412,6 +480,21 @@ export function setflat(on: boolean) {
   app.editing = null
   app.menu = null
   localStorage.setItem('flat', on ? '1' : '0')
+}
+
+/** switch between the canvas and the pile */
+export function setpile(on: boolean) {
+  app.pile = on
+  app.sel = []
+  app.editing = null
+  app.menu = null
+}
+
+/** open a pile card's link, playing instagram in the overlay on desktop */
+export function peek(i: item) {
+  if (i.kind !== 'link') return
+  if (igembed(i.url) && !coarse()) app.playing = i.url!
+  else openlink(i.url)
 }
 
 /** the spot after the last card in reading order, below the last lane */
@@ -444,7 +527,7 @@ export function pictures(id: string, seen = new Set<string>()): string[] {
   const list = app.boards[id]?.items.filter((i) => !i.deleted)
   if (!list || seen.has(id)) return []
   seen.add(id)
-  const own = list.map(picture).filter((a) => !!a)
+  const own = [...list, ...piled(id)].map(picture).filter((a) => !!a)
   return [...new Set([...own, ...list.flatMap((i) => (i.kind === 'board' && i.board ? pictures(i.board, seen) : []))])]
 }
 
@@ -452,7 +535,7 @@ export function pictures(id: string, seen = new Set<string>()): string[] {
 export function cover(id: string) {
   const b = app.boards[id]
   const all = pictures(id)
-  const own = b?.items.filter((i) => !i.deleted).map(picture).filter((a) => !!a) ?? []
+  const own = [...(b?.items.filter((i) => !i.deleted) ?? []), ...piled(id)].map(picture).filter((a) => !!a)
   return [...new Set([...(b?.cover ?? []).filter((a) => all.includes(a)), ...(own.length ? own : all)])].slice(0, 3)
 }
 
@@ -500,7 +583,7 @@ export function togglelayout(ids: string[]) {
 }
 
 /** delete cards, with the cards in their columns, and mark their boards deleted */
-export function remove(ids: string[]) {
+export function remove(ids: string[], tell = true) {
   const all = items()
   const gone = all.filter((i) => ids.includes(i.id) || ids.includes(i.parent ?? ''))
   const meta = gone
@@ -508,6 +591,8 @@ export function remove(ids: string[]) {
     .map((i) => ({ id: i.board!, before: { deleted: !!app.boards[i.board!].deleted }, after: { deleted: true } }))
   commit(patch(Object.fromEntries(gone.map((i) => [i.id, { deleted: true }]))), meta)
   app.sel = []
+  const n = gone.filter((i) => !gone.some((j) => j.id === i.parent)).length
+  if (tell && n) say(n === 1 ? 'Deleted' : `${many(n, 'card')} deleted`)
 }
 
 /** copy a board and the boards inside it */
@@ -660,7 +745,7 @@ export function rename(id: string, name: string) {
 /** finish a note edit, folding it into the note's add step when it was just created */
 export function settext(id: string, text: string) {
   const last = fresh(id)?.changes
-  if (!last) return text.trim() ? update({ [id]: { text } }) : remove([id])
+  if (!last) return text.trim() ? update({ [id]: { text } }) : remove([id], false)
   const b = current()
   const now = Date.now()
   if (text.trim()) write(b, (last[0].after = { ...last[0].after, text, updated: now }))

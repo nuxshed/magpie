@@ -3,16 +3,19 @@
   import { goto } from '$app/navigation'
   import { page } from '$app/state'
   import { onMount, tick, untrack } from 'svelte'
-  import { addnote, alive, app, current, droptarget, endcrop, items, load, rect, tail, unbox } from '../board.svelte'
+  import { addnote, alive, app, current, droptarget, endcrop, items, load, piled, rect, tail, unbox } from '../board.svelte'
   import type { item } from '../model'
   import Card from '../cards/card.svelte'
   import Add from '../chrome/add.svelte'
   import Coverpick from '../chrome/coverpick.svelte'
   import Croptool from '../chrome/croptool.svelte'
   import Flat from './flat.svelte'
+  import Layers from '../chrome/layers.svelte'
+  import Pile from './pile.svelte'
   import Player from '../chrome/player.svelte'
   import Menu from '../chrome/menu.svelte'
   import Selbar from '../chrome/selbar.svelte'
+  import Toast from '../chrome/toast.svelte'
   import Top from '../chrome/top.svelte'
   import Zoom from '../chrome/zoom.svelte'
   import { onkey, typing } from '../input/keys'
@@ -101,7 +104,7 @@
     const from = app.current
     const still = matchMedia('(prefers-reduced-motion: reduce)').matches
     const card = items().find((i) => i.kind === 'board' && i.board === id)
-    const out = card && !still && !app.flat ? zoom(card, true) : null
+    const out = card && !still && !app.flat && !app.pile ? zoom(card, true) : null
     if (from) keep(from)
     const done = out && Promise.race([out.finished, new Promise((ok) => setTimeout(ok, 400))])
     const [v] = await Promise.all([get<{ x: number; y: number; zoom: number }>('views', id), done])
@@ -110,6 +113,7 @@
     app.visits[id] = { n: (app.visits[id]?.n ?? 0) + 1, seen: Date.now() }
     keep(id)
     app.current = id
+    app.pile ||= !items().length && !!piled(id).length
     app.sel = []
     app.editing = null
     app.last = null
@@ -117,7 +121,7 @@
     await tick()
     out?.cancel()
     const back = items().find((i) => i.kind === 'board' && i.board === from)
-    if (still || app.flat) return
+    if (still || app.flat || app.pile) return
     if (back) zoom(back, false).finished.then((a) => a.cancel())
     else world!.animate([{ opacity: 0 }, { opacity: 1 }], { duration: parseFloat(getComputedStyle(world!).getPropertyValue('--d-base')) })
   }
@@ -152,7 +156,7 @@
 
   /** pinch and cmd+scroll zoom around the cursor, plain scroll pans */
   function wheel(e: WheelEvent) {
-    if (app.flat || (e.target as Element).closest('.inbox')) return
+    if (app.flat || app.pile || (e.target as Element).closest('.inbox')) return
     e.preventDefault()
     app.menu = null
     const k = e.deltaMode === 1 ? 16 : 1
@@ -185,7 +189,7 @@
     touched = e.pointerType === 'touch'
     if (app.menu && !(e.target as Element).closest('.menu')) app.menu = null
     if (app.cropping && !(e.target as Element).closest(`.cropbar, [data-id="${app.cropping}"]`)) endcrop(true)
-    if (app.flat) return
+    if (app.flat || app.pile) return
     if (touched) {
       const a = document.activeElement
       if (a instanceof HTMLElement && typing(a) && a !== e.target) a.blur()
@@ -262,7 +266,7 @@
 
   function over(e: DragEvent) {
     e.preventDefault()
-    if (app.flat) return
+    if (app.flat || app.pile) return
     const t = droptarget(toworld(e.clientX, e.clientY))
     if (t?.col !== app.target?.col || t?.slot !== app.target?.slot) app.target = t
   }
@@ -272,8 +276,8 @@
     app.target = null
     const id = e.dataTransfer?.getData('text/x-magpie-inbox')
     const at = app.flat ? tail() : toworld(e.clientX, e.clientY)
-    if (id) unbox(id, at)
-    else adddata(e.dataTransfer, at)
+    if (!id) adddata(e.dataTransfer, at)
+    else if (!app.pile) unbox(id, at)
   }
 </script>
 
@@ -298,7 +302,9 @@
   ondragleave={(e) => !el?.contains(e.relatedTarget as Node) && (app.target = null)}
   ondrop={drop}
 >
-  {#if app.flat}
+  {#if app.pile}
+    <Pile />
+  {:else if app.flat}
     <Flat />
   {:else}
   <div class="world" bind:this={world} style:transform="translate({view.x}px, {view.y}px) scale({view.zoom})">
@@ -339,6 +345,8 @@
   <Coverpick />
   <Player />
   <Top />
+  <Layers />
+  <Toast />
   <Add />
   <Zoom />
 </div>

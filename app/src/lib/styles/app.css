@@ -140,7 +140,7 @@ input.col-t{font-family:inherit;line-height:inherit}
   .tr{flex:none}
   .sync:not(.error) span{display:none}
   .bl{left:8px;bottom:8px}
-  .br{right:8px;bottom:8px}
+  .br{display:none}
   .syncerr,.menu.more{right:8px}
   .blank{padding:0 24px}
   .blank .big{font-size:28px}

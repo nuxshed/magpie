@@ -18,7 +18,7 @@ export async function pullinbox() {
   const url = `${PUBLIC_PREVIEW_URL}/inbox`
   const authorization = `Bearer ${key}`
   try {
-    const names = ['Inbox', 'Home', ...Object.keys(paths()).filter((p) => p !== 'Home').sort()].join('\n')
+    const names = ['Unsorted', 'Home', ...Object.keys(paths()).filter((p) => p !== 'Home').sort()].join('\n')
     if (names !== localStorage.getItem('inboxboards')) {
       const put = await fetch(`${url}/boards`, { method: 'PUT', headers: { authorization }, body: names })
       if (put.ok) localStorage.setItem('inboxboards', names)

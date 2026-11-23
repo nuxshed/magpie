@@ -54,7 +54,7 @@ type item = {
   collapsed?: boolean
   // board
   board?: string        // child board id
-  dest?: string         // inbox only: the board it was sent to
+  dest?: string         // pile only: the board it belongs to
 }
 
 type board = {
@@ -116,19 +116,28 @@ Two preview endpoints, both GET, CORS limited to `ALLOWED_ORIGIN`, public http/h
 - Instagram link cards take their frame from the picture's own aspect (portrait for reels and most posts), not the wide link frame. They show a play mark, and opening one on desktop plays Instagram's own embed (`/p/<code>/embed/captioned/`) in an overlay, with Open on Instagram and Close; Escape or a click outside closes it. On touch screens it opens the post in Instagram instead.
 - `/image?url=&ref=` → the image bytes, `ref` sent as Referer. Raster image types only, no SVG, max 10MB. The app compresses the result (1200px long edge) and saves it as an asset, so link thumbnails survive the site going away.
 
-## Inbox
+## Pile
+
+Every board has two layers: the canvas, arranged by hand, and the pile, collected without effort. Things sent from the phone or pasted into the pile stay there until placed or removed; nothing needs to be arranged.
+
 
 Send links and text from the phone through an iOS Shortcut in the share sheet.
 
 - `/inbox` on the worker, guarded by `Authorization: Bearer <INBOX_KEY>` (a worker secret), kept in D1 (`schema.sql`).
 - `POST` takes `{ "text": …, "board"?: …, "title"?: …, "desc"?: … }` as JSON or a raw text body. Title and desc are the page's og tags, read by the phone, which Instagram serves to phones but not to the worker. They are entity decoded, and an Instagram `Name on Instagram: "caption"` title splits into title and caption. `GET` returns `[{ id, text, board, title, caption }]` oldest first. `DELETE` takes a JSON array of ids.
-- `/inbox/boards`: the app `PUT`s `Inbox`, `Home`, then its live board paths like `Travel / Vietnam`, as plain text, one per line. It sends them only when they changed. The Shortcut `GET`s them to show a Choose from List.
+- `/inbox/boards`: the app `PUT`s `Unsorted`, `Home`, then its live board paths like `Travel / Vietnam`, as plain text, one per line. It sends them only when they changed. The Shortcut `GET`s them to show a Choose from List.
 - The app keeps the key in localStorage, set once per device by opening `/#inbox=<key>`.
-- It pulls on open, on focus and every 30s while visible. Entries go into a hidden board with the id `inbox`, which syncs like any board but is never shown as a canvas. Each card keeps `dest`, the board its path names; `Inbox` or an unknown path leaves it unsorted. The first URL in the text becomes a link card, anything else a note. The card takes the entry id, so two devices pulling at once merge into one card. Arrivals get no undo step; `order` holds the arrival time.
-- The inbox button sits in the bottom right, before the zoom controls, with the count of cards for the open board. It opens a tray, newest first, with two tabs: This board (the default, reset on every board change) and All, grouped as unsorted, then each board by path. Unsorted cards, and cards whose board was deleted, belong to Home.
-- On touch screens the inbox button opens it full screen, and Close shuts it. Elsewhere the tray can go full screen, also toggled with I: masonry tiles with full pictures, one column on narrow screens, with the same tabs.
-- Clicking a card opens its link (Instagram plays in the overlay on desktop); it never places it. Add places it in the middle of the view, clear of other cards when there is room, or below the last card in the flat view, and the inbox stays open. Dragging it from the tray onto the canvas places it there, or into the column under it. Send places a card for another board on that board, to the right of what is there. × removes it. Each is one undo step, and a placed card leaves the inbox.
-- Move on an inbox card marks it for another board, or unsorted. Move to inbox in a card's menu, and Inbox at the top of Move to board, put cards back in the inbox, marked for the open board; a column gives up its cards and stays, board cards stay.
+- It pulls on open, on focus and every 30s while visible. Entries go into a hidden board with the id `inbox`, which syncs like any board but is never shown as a canvas. Each card keeps `dest`, the board its path names; `Unsorted` or an unknown path leaves it unsorted. The first URL in the text becomes a link card, anything else a note. The card takes the entry id, so two devices pulling at once merge into one card. A link already in the pile (compared without tracking parameters, and without the query on Instagram) moves to the top instead; one already on its board is skipped. Arrivals get no undo step; `order` holds the arrival time.
+- A board's pile is the cards whose `dest` is that board. Unsorted cards, and cards whose board was deleted, belong to Home. Inside a board the pile shows its own cards and those of every board below it, so Home shows everything.
+- A Canvas / Pile switch sits at the top centre (bottom right on phones); a pill glides between the two. I toggles it, Escape goes back to the canvas. The pile stays open while moving between boards; from the canvas, a board opens on its pile when its canvas is empty and its own pile is not.
+- The pile view has a search field (title, description, text, site and url), then a row of the boards on the open board's canvas: cover, name and pile count. Clicking one opens its pile; dragging a card onto one moves the card to that board's pile. The view fades in, and cards rise in, a little staggered.
+- Cards lay out in about 230px columns, newest first from left to right, each into the shortest column, two columns on phones. Picture cards keep their frame aspect, with a play mark on Instagram; notes show their text, links without a picture their title in the display face and the domain. Under each card: its title when it has a picture, the site, the board when it is below the open one, and how long ago it arrived. Pasting or dropping while the pile is open adds to it, as one undo step. The canvas controls are hidden there.
+- Clicking a card opens its link (Instagram plays in the overlay on desktop, opens in Instagram on touch). Hovering shows icon buttons on the card (always shown on touch): Place puts it on its board's canvas, to the right of what is there; Move marks it for another board or unsorted; × removes it. Each is one undo step, and a placed card leaves the pile.
+- Right click on a card, or a still 450ms press on touch, opens its menu: Open, Place, Move to… (a list of boards), Copy link, Remove. Right click on empty space: Paste, Add image…, Show the canvas, Up one level.
+- Placing, sending, moving, removing, saving to the pile, moving cards to another board and deleting cards show a short message at the bottom with Undo, for 4.5s (held while hovered). Any later change or undo clears it. Copy link shows one without Undo.
+- On a canvas the pile button in the bottom right, before the zoom controls, opens a tray listing the same cards, for dragging onto the canvas or into a column; Add places one in the middle of the view, clear of other cards when there is room, or below the last card in the flat view. Phones have no tray or zoom controls; the switch takes their place.
+- Move to pile in a card's menu, and Pile at the top of Move to board, put cards in the open board's pile; a column gives up its cards and stays, board cards stay.
+- Board cards count and show pictures from their board's pile along with its canvas.
 
 ## Flat view
 

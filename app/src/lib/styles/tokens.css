@@ -17,6 +17,7 @@
   --r-xs: 3px; --r-s: 4px; --r-btn: 5px; --r-m: 6px; --r-l: 8px; --r-xl: 10px;
   --d-fast: 90ms; --d-base: 140ms; --d-slow: 180ms;
   --ease: cubic-bezier(.2,.7,.2,1); --ease-settle: cubic-bezier(.3,1.25,.5,1);
+  --d-glide: 340ms; --ease-glide: cubic-bezier(.32,.72,0,1);
 }
 
 :root[data-theme="dark"] {

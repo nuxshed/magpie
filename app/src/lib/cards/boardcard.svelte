@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { app, cover } from '../board.svelte'
+  import { app, cover, piled } from '../board.svelte'
   import type { item } from '../model'
   import Name from './name.svelte'
   import Picture from './picture.svelte'
@@ -9,7 +9,7 @@
   const b = $derived(app.boards[card.board ?? ''])
   const live = $derived(b?.items.filter((i) => !i.deleted) ?? [])
   const pics = $derived(cover(card.board ?? ''))
-  const count = $derived(live.filter((i) => i.kind !== 'column').length)
+  const count = $derived(live.filter((i) => i.kind !== 'column').length + piled(card.board ?? '').length)
   const trios = [
     [1, 2, 4],
     [3, 8, 12],

@@ -1,9 +1,12 @@
-import { add, droptarget, update, type target } from '../board.svelte'
+import { add as place, app, droptarget, stash, update, type target } from '../board.svelte'
 import { widths, type draft } from '../model'
 import { saveimage } from '../store/images'
 import { fetchpreviews } from '../store/preview'
 
 type point = { x: number; y: number }
+
+/** new cards go in the pile while it is open, else on the canvas */
+const add = (list: draft[], t?: target | null) => (app.pile ? stash(list) : place(list, t))
 
 /** add image files in a row from a point, 24px apart */
 export async function addfiles(files: File[], at: point, t?: target | null) {

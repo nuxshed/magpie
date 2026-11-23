@@ -113,7 +113,7 @@
     {:else if app.menu.pick}
       <div class="pick">
       <div class="rl">Move to board</div>
-      <button class="mi" type="button" onclick={() => run(() => tobox(app.sel))}>Inbox<span class="s">for this board</span></button>
+      <button class="mi" type="button" onclick={() => run(() => tobox(app.sel))}>Pile<span class="s">of this board</span></button>
       {#each dests as d (d.id)}
         <button class="mi" type="button" onclick={() => run(() => sendto(moving(), d.id))}>
           {d.names.at(-1)}<span class="s">{d.names.slice(0, -1).join(' / ')}</span>
@@ -179,7 +179,7 @@
       <button class="mi" type="button" onclick={() => app.menu && (app.menu.pick = true)}>
         Move to board…<span class="s">M</span>
       </button>
-      <button class="mi" type="button" onclick={() => run(() => tobox(app.sel))}>Move to inbox</button>
+      <button class="mi" type="button" onclick={() => run(() => tobox(app.sel))}>Move to pile</button>
       <div class="msep"></div>
       <button class="mi danger" type="button" onclick={() => run(() => remove(app.sel))}>Delete<span class="s">⌫</span></button>
     {/if}

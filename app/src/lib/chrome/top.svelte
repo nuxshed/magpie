@@ -59,6 +59,7 @@
     {:else}
       <span class="sync {app.sync}" title={labels[app.sync]}><i class="dot"></i><span>{labels[app.sync]}</span></span>
     {/if}
+    {#if !app.pile}
     <button class="q" type="button" aria-label={app.flat ? 'Canvas view' : 'List view'} title="{app.flat ? 'Canvas view' : 'List view'} (V)" onclick={() => setflat(!app.flat)}>
       {#if app.flat}
         <svg viewBox="0 0 14 14" aria-hidden="true"><rect x="1.5" y="1.5" width="5" height="6" rx="1" /><rect x="8.5" y="3.5" width="4" height="4" rx="1" /><rect x="3.5" y="9.5" width="6" height="3" rx="1" /></svg>
@@ -66,6 +67,7 @@
         <svg viewBox="0 0 14 14" aria-hidden="true"><rect x="1.5" y="1.5" width="4.5" height="6" rx="1" /><rect x="1.5" y="9" width="4.5" height="3.5" rx="1" /><rect x="8" y="1.5" width="4.5" height="3.5" rx="1" /><rect x="8" y="6.5" width="4.5" height="6" rx="1" /></svg>
       {/if}
     </button>
+    {/if}
     <button class="q" class:on={more} type="button" aria-label="Menu" onclick={() => (more = !more)}>
       <svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="3" cy="7" r=".8" /><circle cx="7" cy="7" r=".8" /><circle cx="11" cy="7" r=".8" /></svg>
     </button>

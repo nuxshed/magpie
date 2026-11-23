@@ -72,6 +72,11 @@ export function onkey(e: KeyboardEvent) {
     if (k === 'escape') app.covering = null
     return
   }
+  if (app.pile) {
+    if (mod && k === 'z') e.shiftKey ? redo() : undo()
+    else if (e.key === '[' || (mod && k === 'arrowup')) up()
+    return
+  }
   if (app.menu && k === 'escape') {
     app.menu = null
     return e.preventDefault()
